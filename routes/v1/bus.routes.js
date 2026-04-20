@@ -5,7 +5,7 @@ const authMiddleware = require('../../middleware/auth.middleware');
 
 
 
-// // Admin-only routes (create/update/delete)
+// //super Admin and sub-admin routes (create/update/delete)
 
 router.post('/create-bus',authMiddleware(['super_admin','sub_admin']),createBus);
 router.post('/:busId/add-trip', authMiddleware(['super_admin', 'sub_admin']),addTrip);

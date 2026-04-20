@@ -69,26 +69,33 @@ exports.login = async (req, res) => {
 exports.verifyOtp = async (req, res) => {
   try {
     const { userId, otp } = req.body;
-   console.log("userId",userId);
 
+    // ১. প্রথমে Admin চেক করা, না পেলে Student চেক করা
     let user = await Admin.findById(userId);
     let role = "admin";
 
     if (!user) {
       user = await Student.findById(userId);
       role = "student";
-    } 
-    console.log("user",user);
-    
-    if (!user || user.otp !== Number(otp) || user.otpExpire < Date.now()) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or expired OTP"
-      });
     }
 
+    // ২. ইউজার অস্তিত্ব এবং OTP ভ্যালিডেশন
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (user.otp !== Number(otp)) {
+      return res.status(400).json({ success: false, message: "Invalid OTP code" });
+    }
+
+    if (user.otpExpire < Date.now()) {
+      return res.status(400).json({ success: false, message: "OTP has expired" });
+    }
+
+    // ৩. OTP সফল হলে ডাটা আপডেট
     user.otp = null;
     user.otpExpire = null;
+    user.isVerified = true; // এই লাইনটি অত্যন্ত গুরুত্বপূর্ণ
 
     if (role === "student") {
       user.lastLogin = new Date();
@@ -96,10 +103,11 @@ exports.verifyOtp = async (req, res) => {
 
     await user.save();
 
+    // ৪. টোকেন জেনারেট করা
     const token = jwt.sign(
       {
         id: user._id,
-        role: role === "admin" ? user.role : "student",
+        role: role === "admin" ? user.role : "student", // সুপার অ্যাডমিন/সাব অ্যাডমিন ডাইনামিক রোল
         permissions: user.permissions || []
       },
       process.env.JWT_SECRET,
@@ -108,8 +116,14 @@ exports.verifyOtp = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Login successful",
-      token
+      message: "Verification & Login successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: role === "admin" ? user.role : "student"
+      }
     });
 
   } catch (error) {
@@ -119,6 +133,60 @@ exports.verifyOtp = async (req, res) => {
     });
   }
 };
+
+// exports.verifyOtp = async (req, res) => {
+//   try {
+//     const { userId, otp } = req.body;
+//    console.log("userId",userId);
+
+//     let user = await Admin.findById(userId);
+//     let role = "admin";
+
+//     if (!user) {
+//       user = await Student.findById(userId);
+//       role = "student";
+//     } 
+//     console.log("user",user);
+    
+//     if (!user || user.otp !== Number(otp) || user.otpExpire < Date.now()) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid or expired OTP"
+//       });
+//     }
+
+//     user.otp = null;
+//     user.otpExpire = null;
+
+//     if (role === "student") {
+//       user.lastLogin = new Date();
+//     }
+
+//     await user.save();
+
+//     const token = jwt.sign(
+//       {
+//         id: user._id,
+//         role: role === "admin" ? user.role : "student",
+//         permissions: user.permissions || []
+//       },
+//       process.env.JWT_SECRET,
+//       { expiresIn: "30d" }
+//     );
+
+//     res.json({
+//       success: true,
+//       message: "Login successful",
+//       token
+//     });
+
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };
 
 //VERIFY OTP
 // exports.verifyOtp = async (req, res) => {

@@ -16,8 +16,6 @@ const StudentSchema = new mongoose.Schema({
 
   mobileNumber: { type: String, required: true },
 
-  isVerified: { type: Boolean, default: false },
-
   otp: Number,
   otpExpire: Date,
 

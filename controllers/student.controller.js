@@ -11,9 +11,7 @@ const moment = require('moment');
 exports.registerStudent = async (req, res) => {
   try {
     const { name, email, password, departmentName, mobileNumber } = req.body;
-      console.log("Email",email);
 
-    // check existing student
     const existingStudent = await Student.findOne({ email });
 
     if (existingStudent) {
@@ -26,31 +24,19 @@ exports.registerStudent = async (req, res) => {
     // hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000);
-
     // create student with OTP
     const student = await Student.create({
       name,
       email,
       password: hashedPassword,
       departmentName,
-      mobileNumber,
-      otp: otp,
-      otpExpire: Date.now() + 5 * 60 * 1000
+      mobileNumber
     });
 
-    // send OTP email
-    await sendEmail(
-      email,
-      "Student Registration OTP",
-      `Your OTP is ${otp}. It will expire in 5 minutes.`
-    );
 
     res.status(201).json({
       success: true,
-      message: "Student registered successfully. OTP sent to email.",
-      userId: student._id
+      message: "Registation successfully "
     });
 
   } catch (error) {
@@ -60,6 +46,7 @@ exports.registerStudent = async (req, res) => {
     });
   }
 };
+
 
 exports.getCurrentTrips = async (req, res) => {
   try {
