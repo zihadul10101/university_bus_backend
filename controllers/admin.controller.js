@@ -1,5 +1,5 @@
 const Admin = require('../models/Admin');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const mongoose = require("mongoose");
 
 // Create Sub Admin

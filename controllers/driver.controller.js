@@ -1,6 +1,6 @@
 const Driver = require('../models/Driver');
 const Bus = require('../models/Bus');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const mongoose = require("mongoose");
 

@@ -1,6 +1,6 @@
 const Admin = require("../models/Admin");
 const Student = require("../models/Student");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/sendEmail");
 
@@ -13,7 +13,7 @@ exports.login = async (req, res) => {
   //  console.log(email,password);
     
     let user = await Admin.findOne({ email });
-  //  console.log("login info",user);
+
     
     let role = "admin";
 
@@ -29,8 +29,13 @@ exports.login = async (req, res) => {
       });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
 
+const cleanPassword = password.trim();
+const isMatch = await bcrypt.compare(cleanPassword, user.password);
+
+
+
+  
     if (!isMatch) {
       return res.status(400).json({
         success: false,
@@ -66,11 +71,11 @@ exports.login = async (req, res) => {
   }
 };
 
+
 exports.verifyOtp = async (req, res) => {
   try {
     const { userId, otp } = req.body;
 
-    // ১. প্রথমে Admin চেক করা, না পেলে Student চেক করা
     let user = await Admin.findById(userId);
     let role = "admin";
 
@@ -79,7 +84,6 @@ exports.verifyOtp = async (req, res) => {
       role = "student";
     }
 
-    // ২. ইউজার অস্তিত্ব এবং OTP ভ্যালিডেশন
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
@@ -92,10 +96,9 @@ exports.verifyOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: "OTP has expired" });
     }
 
-    // ৩. OTP সফল হলে ডাটা আপডেট
     user.otp = null;
     user.otpExpire = null;
-    user.isVerified = true; // এই লাইনটি অত্যন্ত গুরুত্বপূর্ণ
+    user.isVerified = true; 
 
     if (role === "student") {
       user.lastLogin = new Date();
@@ -103,11 +106,11 @@ exports.verifyOtp = async (req, res) => {
 
     await user.save();
 
-    // ৪. টোকেন জেনারেট করা
+
     const token = jwt.sign(
       {
         id: user._id,
-        role: role === "admin" ? user.role : "student", // সুপার অ্যাডমিন/সাব অ্যাডমিন ডাইনামিক রোল
+        role: role === "admin" ? user.role : "student", 
         permissions: user.permissions || []
       },
       process.env.JWT_SECRET,
