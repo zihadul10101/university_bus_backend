@@ -10,11 +10,11 @@ const sendEmail = require("../utils/sendEmail");
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-  //  console.log(email,password);
-    
+    //  console.log(email,password);
+
     let user = await Admin.findOne({ email });
 
-    
+
     let role = "admin";
 
     if (!user) {
@@ -30,12 +30,12 @@ exports.login = async (req, res) => {
     }
 
 
-const cleanPassword = password.trim();
-const isMatch = await bcrypt.compare(cleanPassword, user.password);
+    const cleanPassword = password.trim();
+    const isMatch = await bcrypt.compare(cleanPassword, user.password);
 
 
 
-  
+
     if (!isMatch) {
       return res.status(400).json({
         success: false,
@@ -77,11 +77,11 @@ const isMatch = await bcrypt.compare(cleanPassword, user.password);
 </div>
 `;
 
-await sendEmail(
-    user.email,
-    "UniBus Login OTP",
-    emailTemplate // সরাসরি HTML স্ট্রিংটি পাঠিয়ে দিন
-);
+    await sendEmail(
+      user.email,
+      "UniBus Login OTP",
+      emailTemplate
+    );
     res.json({
       success: true,
       message: "OTP sent to your email",
@@ -124,7 +124,7 @@ exports.verifyOtp = async (req, res) => {
 
     user.otp = null;
     user.otpExpire = null;
-    user.isVerified = true; 
+    user.isVerified = true;
 
     if (role === "student") {
       user.lastLogin = new Date();
@@ -136,7 +136,7 @@ exports.verifyOtp = async (req, res) => {
     const token = jwt.sign(
       {
         id: user._id,
-        role: role === "admin" ? user.role : "student", 
+        role: role === "admin" ? user.role : "student",
         permissions: user.permissions || []
       },
       process.env.JWT_SECRET,
@@ -176,7 +176,7 @@ exports.verifyOtp = async (req, res) => {
 //       role = "student";
 //     } 
 //     console.log("user",user);
-    
+
 //     if (!user || user.otp !== Number(otp) || user.otpExpire < Date.now()) {
 //       return res.status(400).json({
 //         success: false,
