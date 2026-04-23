@@ -107,7 +107,7 @@ exports.resendOtp = async (req, res) => {
   user.otp = newOtp;
   user.otpExpire = Date.now() + 5 * 60 * 1000;
   await user.save();
-    const emailTemplate = `
+  const emailTemplate = `
 <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
     <div style="background-color: #007AFF; padding: 20px; text-align: center;">
         <h1 style="color: white; margin: 0; font-size: 24px;">UniBus Verification</h1>
@@ -134,11 +134,11 @@ exports.resendOtp = async (req, res) => {
 </div>
 `;
 
-    await sendEmail(
-      user.email,
-      "UniBus New Login OTP",
-      emailTemplate
-    );
+  await sendEmail(
+    user.email,
+    "UniBus New Login OTP",
+    emailTemplate
+  );
   // await sendEmail(user.email, "Your New OTP", `<h1>Code: ${newOtp}</h1>`);
 
   res.json({ success: true, message: "New OTP sent to your email" });
@@ -207,7 +207,48 @@ exports.verifyOtp = async (req, res) => {
     });
   }
 };
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
 
+
+    let user = await Admin.findOne({ email });
+    let role = 'admin';
+
+
+    if (!user) {
+      user = await Student.findOne({ email });
+      role = 'student';
+    }
+
+    
+    if (!user) {
+      return res.status(400).json({ message: "Email not found" });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000);
+
+    user.otp = otp;
+    user.otpExpire = Date.now() + 5 * 60 * 1000; // ৫ মিনিট মেয়াদ
+    await user.save();
+
+    await sendEmail(
+      user.email,
+      "Password Reset OTP",
+      `Your UniBus Password Reset OTP is ${otp}. It will expire in 5 minutes.`
+    );
+
+    res.json({ 
+      success: true, 
+      message: "OTP sent to email",
+      userId: user._id, 
+      role: role 
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 // exports.verifyOtp = async (req, res) => {
 //   try {
 //     const { userId, otp } = req.body;
@@ -298,31 +339,31 @@ exports.verifyOtp = async (req, res) => {
 // };
 
 // FORGOT PASSWORD
-exports.forgotPassword = async (req, res) => {
-  try {
-    const { email } = req.body;
+// exports.forgotPassword = async (req, res) => {
+//   try {
+//     const { email } = req.body;
 
-    const admin = await Admin.findOne({ email });
-    if (!admin)
-      return res.status(400).json({ message: "Email not found" });
+//     const admin = await Admin.findOne({ email });
+//     if (!admin)
+//       return res.status(400).json({ message: "Email not found" });
 
-    const otp = Math.floor(100000 + Math.random() * 900000);
+//     const otp = Math.floor(100000 + Math.random() * 900000);
 
-    admin.otp = otp;
-    admin.otpExpire = Date.now() + 5 * 60 * 1000;
-    await admin.save();
+//     admin.otp = otp;
+//     admin.otpExpire = Date.now() + 5 * 60 * 1000;
+//     await admin.save();
 
-    await sendEmail(
-      admin.email,
-      "Password Reset OTP",
-      `Your OTP is ${otp}.`
-    );
+//     await sendEmail(
+//       admin.email,
+//       "Password Reset OTP",
+//       `Your OTP is ${otp}.`
+//     );
 
-    res.json({ message: "OTP sent to email" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+//     res.json({ message: "OTP sent to email" });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
 
 // RESET PASSWORD
 exports.resetPassword = async (req, res) => {
