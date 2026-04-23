@@ -50,19 +50,38 @@ const isMatch = await bcrypt.compare(cleanPassword, user.password);
     user.otpExpire = Date.now() + 5 * 60 * 1000;
     await user.save();
 
-    await sendEmail(
-      user.email,
-      "Login OTP",
-      `
-        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee;">
-          <h2 style="color: #007AFF;">UniBus OTP Verification</h2>
-          <p>Your verification code is:</p>
-          <h1 style="background: #f4f4f4; padding: 10px; display: inline-block; letter-spacing: 5px;">${otp}</h1>
-          <p>This code will expire in 5 minutes.</p>
+    const emailTemplate = `
+<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+    <div style="background-color: #007AFF; padding: 20px; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">UniBus Verification</h1>
+    </div>
+    <div style="padding: 30px; background-color: #ffffff;">
+        <p style="font-size: 16px; color: #333;">Hello,</p>
+        <p style="font-size: 16px; color: #555;">Your one-time password (OTP) for logging into your UniBus account is:</p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <span style="font-size: 32px; font-weight: bold; color: #007AFF; letter-spacing: 8px; border: 2px dashed #007AFF; padding: 10px 20px; border-radius: 8px; background-color: #f0f7ff;">
+                ${otp}
+            </span>
         </div>
-      `
-    );
+        
+        <p style="font-size: 14px; color: #888; text-align: center;">
+            This OTP is valid for <strong>5 minutes</strong>. Do not share this code with anyone.
+        </p>
+    </div>
+    <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-top: 1px solid #eeeeee;">
+        <p style="font-size: 12px; color: #aaa; margin: 0;">
+            &copy; 2026 UniBus System | Southern University Bangladesh
+        </p>
+    </div>
+</div>
+`;
 
+await sendEmail(
+    user.email,
+    "UniBus Login OTP",
+    emailTemplate // সরাসরি HTML স্ট্রিংটি পাঠিয়ে দিন
+);
     res.json({
       success: true,
       message: "OTP sent to your email",
