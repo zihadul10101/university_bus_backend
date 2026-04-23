@@ -97,7 +97,52 @@ exports.login = async (req, res) => {
   }
 };
 
+exports.resendOtp = async (req, res) => {
+  const { userId } = req.body;
+  const user = await Student.findById(userId) || await Admin.findById(userId);
 
+  if (!user) return res.status(404).json({ message: "User not found" });
+
+  const newOtp = Math.floor(100000 + Math.random() * 900000);
+  user.otp = newOtp;
+  user.otpExpire = Date.now() + 5 * 60 * 1000;
+  await user.save();
+    const emailTemplate = `
+<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+    <div style="background-color: #007AFF; padding: 20px; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">UniBus Verification</h1>
+    </div>
+    <div style="padding: 30px; background-color: #ffffff;">
+        <p style="font-size: 16px; color: #333;">Hello,</p>
+        <p style="font-size: 16px; color: #555;">Your New one-time password (OTP) for logging into your UniBus account is:</p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <span style="font-size: 32px; font-weight: bold; color: #007AFF; letter-spacing: 8px; border: 2px dashed #007AFF; padding: 10px 20px; border-radius: 8px; background-color: #f0f7ff;">
+                ${newOtp}
+            </span>
+        </div>
+        
+        <p style="font-size: 14px; color: #888; text-align: center;">
+            This OTP is valid for <strong>5 minutes</strong>. Do not share this code with anyone.
+        </p>
+    </div>
+    <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-top: 1px solid #eeeeee;">
+        <p style="font-size: 12px; color: #aaa; margin: 0;">
+            &copy; 2026 UniBus System | Southern University Bangladesh
+        </p>
+    </div>
+</div>
+`;
+
+    await sendEmail(
+      user.email,
+      "UniBus New Login OTP",
+      emailTemplate
+    );
+  // await sendEmail(user.email, "Your New OTP", `<h1>Code: ${newOtp}</h1>`);
+
+  res.json({ success: true, message: "New OTP sent to your email" });
+};
 exports.verifyOtp = async (req, res) => {
   try {
     const { userId, otp } = req.body;

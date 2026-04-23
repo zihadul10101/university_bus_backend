@@ -5,12 +5,14 @@ const {
   verifyOtp,
   forgotPassword,
   resetPassword,
-  getMe
+  getMe,
+  resendOtp
 } = require("../../controllers/auth.controller");
 
 
 router.post("/login", login);
-router.post("/verify-otp", verifyOtp);
+router.post("/verify-otp",verifyOtp);
+router.post("/resend-otp",resendOtp);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 
