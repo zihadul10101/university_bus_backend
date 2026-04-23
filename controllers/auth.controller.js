@@ -53,7 +53,14 @@ const isMatch = await bcrypt.compare(cleanPassword, user.password);
     await sendEmail(
       user.email,
       "Login OTP",
-      `Your OTP is ${otp}. It will expire in 5 minutes.`
+      `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee;">
+          <h2 style="color: #007AFF;">UniBus OTP Verification</h2>
+          <p>Your verification code is:</p>
+          <h1 style="background: #f4f4f4; padding: 10px; display: inline-block; letter-spacing: 5px;">${otp}</h1>
+          <p>This code will expire in 5 minutes.</p>
+        </div>
+      `
     );
 
     res.json({
