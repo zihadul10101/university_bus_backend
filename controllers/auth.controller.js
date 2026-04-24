@@ -147,31 +147,27 @@ exports.verifyOtp = async (req, res) => {
   try {
     const { userId, otp } = req.body;
 
-    // ১. প্রথমে স্টুডেন্ট টেবিলে চেক করুন
     let user = await Student.findById(userId);
-    
-    // ২. যদি না পাওয়া যায়, তবে এডমিন টেবিলে চেক করুন
+
     if (!user) {
       user = await Admin.findById(userId);
     }
 
-    // ৩. যদি কাউকেই না পাওয়া যায়
+
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    // ৪. ওটিপি চেক করুন (Loose equality != ব্যবহার করা নিরাপদ)
     if (user.otp != otp) {
       return res.status(400).json({ success: false, message: "Invalid OTP code" });
     }
 
-    // ৫. ওটিপি মেয়াদের সময় চেক করুন (যদি আপনার মডেলে otpExpire থাকে)
     if (user.otpExpire && user.otpExpire < Date.now()) {
       return res.status(400).json({ success: false, message: "OTP has expired" });
     }
 
-    res.status(200).json({ 
-      success: true, 
+    res.status(200).json({
+      success: true,
       message: "Verification successful",
       user: {
         id: user._id,
@@ -185,70 +181,6 @@ exports.verifyOtp = async (req, res) => {
   }
 };
 
-// exports.verifyOtp = async (req, res) => {
-//   try {
-//     const { userId, otp } = req.body;
-
-//     let user = await Admin.findById(userId);
-//     let role = "admin";
-
-//     if (!user) {
-//       user = await Student.findById(userId);
-//       role = "student";
-//     }
-
-//     if (!user) {
-//       return res.status(404).json({ success: false, message: "User not found" });
-//     }
-
-//     if (user.otp !== Number(otp)) {
-//       return res.status(400).json({ success: false, message: "Invalid OTP code" });
-//     }
-
-//     if (user.otpExpire < Date.now()) {
-//       return res.status(400).json({ success: false, message: "OTP has expired" });
-//     }
-
-//     user.otp = null;
-//     user.otpExpire = null;
-//     user.isVerified = true;
-
-//     if (role === "student") {
-//       user.lastLogin = new Date();
-//     }
-
-//     await user.save();
-
-
-//     const token = jwt.sign(
-//       {
-//         id: user._id,
-//         role: role === "admin" ? user.role : "student",
-//         permissions: user.permissions || []
-//       },
-//       process.env.JWT_SECRET,
-//       { expiresIn: "30d" }
-//     );
-
-//     res.json({
-//       success: true,
-//       message: "Verification & Login successful",
-//       token,
-//       user: {
-//         id: user._id,
-//         name: user.name,
-//         email: user.email,
-//         role: role === "admin" ? user.role : "student"
-//       }
-//     });
-
-//   } catch (error) {
-//     res.status(500).json({
-//       success: false,
-//       message: error.message
-//     });
-//   }
-// };
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -263,7 +195,7 @@ exports.forgotPassword = async (req, res) => {
       role = 'student';
     }
 
-    
+
     if (!user) {
       return res.status(400).json({ message: "Email not found" });
     }
@@ -271,79 +203,53 @@ exports.forgotPassword = async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000);
 
     user.otp = otp;
-    user.otpExpire = Date.now() + 5 * 60 * 1000; // ৫ মিনিট মেয়াদ
+    user.otpExpire = Date.now() + 5 * 60 * 1000; 
     await user.save();
+  const emailTemplate = `
+<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+    <div style="background-color: #007AFF; padding: 20px; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">UniBus Verification</h1>
+    </div>
+    <div style="padding: 30px; background-color: #ffffff;">
+        <p style="font-size: 16px; color: #333;">Hello,</p>
+        <p style="font-size: 16px; color: #555;">Your Reset Password OTP  for logging into your UniBus account is:</p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <span style="font-size: 32px; font-weight: bold; color: #007AFF; letter-spacing: 8px; border: 2px dashed #007AFF; padding: 10px 20px; border-radius: 8px; background-color: #f0f7ff;">
+                ${otp}
+            </span>
+        </div>
+        
+        <p style="font-size: 14px; color: #888; text-align: center;">
+            This OTP is valid for <strong>5 minutes</strong>. Do not share this code with anyone.
+        </p>
+    </div>
+    <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-top: 1px solid #eeeeee;">
+        <p style="font-size: 12px; color: #aaa; margin: 0;">
+            &copy; 2026 UniBus System | Southern University Bangladesh
+        </p>
+    </div>
+</div>
+`;
 
-    await sendEmail(
-      user.email,
-      "Password Reset OTP",
-      `Your UniBus Password Reset OTP is ${otp}. It will expire in 5 minutes.`
-    );
+  await sendEmail(
+    user.email,
+     "Password Reset OTP",
+       emailTemplate
+  );
+ 
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: "OTP sent to email",
-      userId: user._id, 
-      role: role 
+      userId: user._id,
+      role: role
     });
 
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-// exports.verifyOtp = async (req, res) => {
-//   try {
-//     const { userId, otp } = req.body;
-//    console.log("userId",userId);
-
-//     let user = await Admin.findById(userId);
-//     let role = "admin";
-
-//     if (!user) {
-//       user = await Student.findById(userId);
-//       role = "student";
-//     } 
-//     console.log("user",user);
-
-//     if (!user || user.otp !== Number(otp) || user.otpExpire < Date.now()) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Invalid or expired OTP"
-//       });
-//     }
-
-//     user.otp = null;
-//     user.otpExpire = null;
-
-//     if (role === "student") {
-//       user.lastLogin = new Date();
-//     }
-
-//     await user.save();
-
-//     const token = jwt.sign(
-//       {
-//         id: user._id,
-//         role: role === "admin" ? user.role : "student",
-//         permissions: user.permissions || []
-//       },
-//       process.env.JWT_SECRET,
-//       { expiresIn: "30d" }
-//     );
-
-//     res.json({
-//       success: true,
-//       message: "Login successful",
-//       token
-//     });
-
-//   } catch (error) {
-//     res.status(500).json({
-//       success: false,
-//       message: error.message
-//     });
-//   }
-// };
 
 
 
@@ -351,7 +257,7 @@ exports.resetPassword = async (req, res) => {
   try {
     const { userId, role, password } = req.body;
 
-   
+
     const Model = (role === 'admin') ? Admin : Student;
 
 
@@ -365,14 +271,14 @@ exports.resetPassword = async (req, res) => {
 
 
     user.password = hashedPassword;
-    user.otp = undefined;       
+    user.otp = undefined;
     user.otpExpire = undefined;
 
     await user.save();
 
-    res.status(200).json({ 
-      success: true, 
-      message: "Password updated successfully! You can now login with your new password." 
+    res.status(200).json({
+      success: true,
+      message: "Password updated successfully! You can now login with your new password."
     });
 
   } catch (error) {
