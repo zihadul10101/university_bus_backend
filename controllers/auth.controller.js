@@ -185,7 +185,13 @@ exports.verifyOtp = async (req, res) => {
       user: {
         id: user._id,
         name: user.name,
-        role: userRole
+        role: userRole,
+        department: user.departmentName || null,
+        mobile: user.mobileNumber || null,
+        permissions: user.permissions || null,
+        isActive: user.isActive,
+        joinedAt: user.createdAt,
+        lastLogin: user.lastLogin
       }
     });
   } catch (error) {
