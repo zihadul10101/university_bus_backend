@@ -15,7 +15,7 @@ const StudentSchema = new mongoose.Schema({
   departmentName: { type: String, required: true },
 
   mobileNumber: { type: String, required: true },
-
+  role: { type: String, default: 'student' },
   otp: Number,
   otpExpire: Date,
 

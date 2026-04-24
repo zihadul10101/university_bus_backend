@@ -3,6 +3,7 @@ const Student = require("../models/Student");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/sendEmail");
+const generateToken = require("../utils/generateToken");
 
 // LOGIN
 
@@ -143,16 +144,22 @@ exports.resendOtp = async (req, res) => {
 
   res.json({ success: true, message: "New OTP sent to your email" });
 };
+
+
+
 exports.verifyOtp = async (req, res) => {
   try {
     const { userId, otp } = req.body;
 
-    let user = await Student.findById(userId);
+    let user = await Admin.findById(userId);
+    let userRole = "";
 
-    if (!user) {
-      user = await Admin.findById(userId);
+    if (user) {
+      userRole = user.role;
+    } else {
+      user = await Student.findById(userId);
+      userRole = user ? (user.role || 'student') : null;
     }
-
 
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
@@ -166,20 +173,26 @@ exports.verifyOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: "OTP has expired" });
     }
 
+    const token = generateToken({ id: user._id, role: userRole });
+
+    user.otp = null;
+    user.otpExpire = null;
+    await user.save();
+
     res.status(200).json({
       success: true,
-      message: "Verification successful",
+      token,
       user: {
         id: user._id,
         name: user.name,
-        email: user.email
+        role: userRole
       }
     });
-
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 exports.forgotPassword = async (req, res) => {
   try {
@@ -203,9 +216,9 @@ exports.forgotPassword = async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000);
 
     user.otp = otp;
-    user.otpExpire = Date.now() + 5 * 60 * 1000; 
+    user.otpExpire = Date.now() + 5 * 60 * 1000;
     await user.save();
-  const emailTemplate = `
+    const emailTemplate = `
 <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
     <div style="background-color: #007AFF; padding: 20px; text-align: center;">
         <h1 style="color: white; margin: 0; font-size: 24px;">UniBus Verification</h1>
@@ -232,12 +245,12 @@ exports.forgotPassword = async (req, res) => {
 </div>
 `;
 
-  await sendEmail(
-    user.email,
-     "Password Reset OTP",
-       emailTemplate
-  );
- 
+    await sendEmail(
+      user.email,
+      "Password Reset OTP",
+      emailTemplate
+    );
+
 
     res.json({
       success: true,
