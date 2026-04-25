@@ -16,7 +16,7 @@ router.post("/resend-otp",resendOtp);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 
-router.get("/me", authMiddleware,getMe);
+router.get("/me", authMiddleware(['super_admin', 'sub_admin','student']),getMe);
 
 module.exports = router;
 

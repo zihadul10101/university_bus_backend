@@ -145,8 +145,6 @@ exports.resendOtp = async (req, res) => {
   res.json({ success: true, message: "New OTP sent to your email" });
 };
 
-
-
 exports.verifyOtp = async (req, res) => {
   try {
     const { userId, otp } = req.body;
@@ -271,7 +269,6 @@ exports.forgotPassword = async (req, res) => {
 };
 
 
-
 exports.resetPassword = async (req, res) => {
   try {
     const { userId, role, password } = req.body;
@@ -305,8 +302,6 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
-
 
 
 exports.getMe = async (req, res) => {
