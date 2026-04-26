@@ -4,7 +4,7 @@ const userSchema = new mongoose.Schema({
   name: String,
   role: {
     type: String,
-    enum: ["student", "driver", "admin"],
+    enum: ["student", "driver", "super_admin","sub_admin"],
   },
   fcmToken: String,
 });

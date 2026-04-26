@@ -1,15 +1,3 @@
-// const checkPermission = (permission) => {
-//   return (req, res, next) => {
-//     if (!req.user.permissions?.[permission]) {
-//       return res.status(403).json({
-//         message: `Missing permission: ${permission}`
-//       });
-//     }
-//     next();
-//   };
-// };
-
-// module.exports = checkPermission;
 
 module.exports = (permissionName) => {
   return (req, res, next) => {

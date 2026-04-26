@@ -11,18 +11,22 @@ const generateToken = require("../utils/generateToken");
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    //  console.log(email,password);
 
     let user = await Admin.findOne({ email });
+    let finalRole = null;
 
-
-    let role = "admin";
-
-    if (!user) {
+    if (user) {
+    
+      finalRole = user.role;
+    } else {
+    
       user = await Student.findOne({ email });
-      role = "student";
+      if (user) {
+        finalRole = "student";
+      }
     }
 
+   
     if (!user) {
       return res.status(400).json({
         success: false,
@@ -30,10 +34,14 @@ exports.login = async (req, res) => {
       });
     }
 
+    console.log("findrole", finalRole);
 
     const cleanPassword = password.trim();
+    console.log("clean pass", cleanPassword);
+
     const isMatch = await bcrypt.compare(cleanPassword, user.password);
 
+    console.log(isMatch);
 
 
 
@@ -87,7 +95,7 @@ exports.login = async (req, res) => {
       success: true,
       message: "OTP sent to your email",
       userId: user._id,
-      role
+      role: finalRole
     });
 
   } catch (error) {
