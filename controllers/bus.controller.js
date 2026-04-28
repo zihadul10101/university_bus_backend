@@ -81,18 +81,30 @@ exports.getBusById = async (req, res) => {
 };
 
 
+
 exports.deleteBus = async (req, res) => {
   try {
-    const { id } = req.params; // নিশ্চিত করুন এখানে params ব্যবহার করছেন
-    const bus = await Bus.findByIdAndDelete(id);
+
+    const { busId } = req.params; 
+
+    const bus = await Bus.findByIdAndDelete(busId);
 
     if (!bus) {
-      return res.status(404).json({ success: false, message: "Bus not found" });
+      return res.status(404).json({ 
+        success: false, 
+        message: "Bus not found with this ID" 
+      });
     }
 
-    res.status(200).json({ success: true, message: "Bus deleted successfully" });
+    res.status(200).json({ 
+      success: true, 
+      message: "Bus deleted successfully" 
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };
 
