@@ -80,28 +80,19 @@ exports.getBusById = async (req, res) => {
   }
 };
 
-// Soft Delete Bus
+
 exports.deleteBus = async (req, res) => {
   try {
-    const { busId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(busId)) {
-      return res.status(400).json({ message: "Invalid Bus ID" });
-    }
-
-    const bus = await Bus.findOneAndUpdate(
-      { _id: busId, isDeleted: false },
-      { isDeleted: true },
-      { new: true }
-    );
+    const { id } = req.params; // নিশ্চিত করুন এখানে params ব্যবহার করছেন
+    const bus = await Bus.findByIdAndDelete(id);
 
     if (!bus) {
-      return res.status(404).json({ message: "Bus not found" });
+      return res.status(404).json({ success: false, message: "Bus not found" });
     }
 
-    res.json({ message: "Bus deleted successfully (soft delete)" });
+    res.status(200).json({ success: true, message: "Bus deleted successfully" });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
