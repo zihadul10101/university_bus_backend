@@ -8,47 +8,38 @@ exports.createBus = async (req, res) => {
   try {
     const { busNo, busName, trips } = req.body;
 
-    const existingBus = await Bus.findOne({ busNo, isDeleted: false });
+    // বাস নম্বর আগে থেকে আছে কি না চেক করা
+    const existingBus = await Bus.findOne({ busNo });
     if (existingBus) {
-      return res.status(400).json({ message: "Bus with this busId already exists" });
+      return res.status(400).json({ 
+        success: false, 
+        message: "Bus with this bus number already exists" 
+      });
     }
 
     const bus = await Bus.create({ busNo, busName, trips });
 
-    res.status(201).json({ message: "Bus created successfully", bus });
+    res.status(201).json({ 
+      success: true, 
+      message: "Bus created successfully", 
+      data: bus 
+    });
   } catch (error) {
-    console.log(error);
-    
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-
 exports.getAllBuses = async (req, res) => {
   try {
-    const buses = await Bus.find({ isDeleted: false });
-    const total = buses.length;
-
-    // ⚠️ No buses found
-    if (total === 0) {
-      return res.status(200).json({
-        success: true,
-        message: "No buses found",
-        totalBuses: 0,
-        data: []
-      });
-    }
-
-    // ✅ Success
+    const buses = await Bus.find();
+    
     return res.status(200).json({
       success: true,
       message: "Buses fetched successfully",
-      totalBuses: total,
+      totalBuses: buses.length,
       data: buses
     });
-
   } catch (error) {
-    // ❌ Error
     return res.status(500).json({
       success: false,
       message: error.message || "Server error"
@@ -56,12 +47,10 @@ exports.getAllBuses = async (req, res) => {
   }
 };
 
-
 exports.getBusById = async (req, res) => {
   try {
     const { busId } = req.params;
 
-    // ❌ Invalid ID
     if (!mongoose.Types.ObjectId.isValid(busId)) {
       return res.status(400).json({
         success: false,
@@ -69,9 +58,8 @@ exports.getBusById = async (req, res) => {
       });
     }
 
-    const bus = await Bus.findOne({ _id: busId, isDeleted: false });
+    const bus = await Bus.findById(busId);
 
-    // ⚠️ Not found
     if (!bus) {
       return res.status(404).json({
         success: false,
@@ -79,45 +67,16 @@ exports.getBusById = async (req, res) => {
       });
     }
 
-    // ✅ Success
     return res.status(200).json({
       success: true,
       message: "Bus fetched successfully",
       data: bus
     });
-
   } catch (error) {
-    // ❌ Error
     return res.status(500).json({
       success: false,
       message: error.message || "Server error"
     });
-  }
-};
-
-// Update Bus
-exports.updateBus = async (req, res) => {
-  try {
-    const { busId } = req.params;
-
-    // Validate MongoDB ObjectId
-    if (!mongoose.Types.ObjectId.isValid(busId)) {
-      return res.status(400).json({ message: "Invalid Bus ID" });
-    }
-
-    const bus = await Bus.findOneAndUpdate(
-      { _id: busId, isDeleted: false },
-      req.body,
-      { new: true }
-    );
-
-    if (!bus) {
-      return res.status(404).json({ message: "Bus not found" });
-    }
-
-    res.json(bus);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
   }
 };
 
@@ -146,125 +105,129 @@ exports.deleteBus = async (req, res) => {
   }
 };
 
+exports.updateBus = async (req, res) => {
+  try {
+    const { busId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(busId)) {
+      return res.status(400).json({ success: false, message: "Invalid Bus ID" });
+    }
+
+    const bus = await Bus.findById(busId);
+    if (!bus) {
+      return res.status(404).json({ success: false, message: "Bus not found" });
+    }
+
+    // শুধুমাত্র পাঠানো ডাটাগুলো আপডেট করা
+    if (req.body.busNo) bus.busNo = req.body.busNo;
+    if (req.body.busName) bus.busName = req.body.busName;
+    if (req.body.trips) bus.trips = req.body.trips;
+
+    await bus.save(); // এটি আপনার মডেলের 'pre-save' সর্টিং রান করবে
+
+    res.json({
+      success: true,
+      message: "Bus updated successfully",
+      data: bus
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 exports.addTrip = async (req, res) => {
   try {
     const { busId } = req.params;
     const { tripTitle, days, from, to } = req.body;
 
-    if (!tripTitle || !from?.stop || !from?.time || !to?.stop || !to?.time) {
-      return res.status(400).json({
-        success: false,
-        message: "Required fields missing"
-      });
-    }
+    const bus = await Bus.findById(busId);
+    if (!bus) return res.status(404).json({ success: false, message: "Bus not found" });
 
-    // Find bus by _id
-    const bus = await Bus.findOne({ _id: busId, isDeleted: false });
-    if (!bus) {
-      return res.status(404).json({ success: false, message: "Bus not found" });
-    }
+    // নতুন ট্রিপ পুশ করা (Mongoose auto-generates _id)
+    bus.trips.push({ tripTitle, days, from, to });
 
-    // Create new trip object (Mongoose will auto-generate _id)
-    const newTrip = { tripTitle, days, from, to };
-
-    bus.trips.push(newTrip);
-
-    // Sort trips by departure time
-    bus.trips.sort((a, b) => a.from.time.localeCompare(b.from.time));
-
+    // save() কল করলে আপনার মডেলের pre-save হুক রান করবে (Sort এবং Time Check)
     await bus.save();
-
-    // Return only the newly added trip with its _id
-    const addedTrip = bus.trips[bus.trips.length - 1];
 
     res.status(201).json({
       success: true,
       message: "Trip added successfully",
-      data: addedTrip
+      data: bus.trips
     });
-
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-
+// ২. ট্রিপ আপডেট করা
 exports.updateTrip = async (req, res) => {
   try {
     const { busId, tripId } = req.params;
-    const { tripTitle, days, from, to } = req.body;
+    const updateData = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(busId) || !mongoose.Types.ObjectId.isValid(tripId)) {
-      return res.status(400).json({ success: false, message: "Invalid busId or tripId" });
-    }
-
-    const bus = await Bus.findOne({ _id: busId, isDeleted: false });
+    const bus = await Bus.findById(busId);
     if (!bus) return res.status(404).json({ success: false, message: "Bus not found" });
 
+    // সাব-ডকুমেন্ট আইডি দিয়ে ট্রিপ খুঁজে বের করা
     const trip = bus.trips.id(tripId);
-    if (!trip || trip.isDeleted) return res.status(404).json({ success: false, message: "Trip not found" });
+    if (!trip) return res.status(404).json({ success: false, message: "Trip not found" });
 
-    // Update full trip fields if provided
-    if (tripTitle) trip.tripTitle = tripTitle;
-    if (days) trip.days = days;
-    if (from?.stop) trip.from.stop = from.stop;
-    if (from?.time) trip.from.time = from.time;
-    if (to?.stop) trip.to.stop = to.stop;
-    if (to?.time) trip.to.time = to.time;
+    // ডাটা আপডেট করা
+    if (updateData.tripTitle) trip.tripTitle = updateData.tripTitle;
+    if (updateData.days) trip.days = updateData.days;
+    if (updateData.from) {
+      if (updateData.from.stop) trip.from.stop = updateData.from.stop;
+      if (updateData.from.time) trip.from.time = updateData.from.time;
+    }
+    if (updateData.to) {
+      if (updateData.to.stop) trip.to.stop = updateData.to.stop;
+      if (updateData.to.time) trip.to.time = updateData.to.time;
+    }
 
-    // Optional: sort trips by departure time after any update
-    bus.trips.sort((a, b) => {
-      const t1 = new Date(`1970-01-01T${a.from.time}:00`);
-      const t2 = new Date(`1970-01-01T${b.from.time}:00`);
-      return t1 - t2;
-    });
-
-    await bus.save();
+    await bus.save(); // pre-save হুক আবার সর্ট করে দেবে
 
     res.json({
       success: true,
       message: "Trip updated successfully",
       data: trip
     });
-
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-
-
-
+// ৩. ট্রিপ ডিলিট করা (যেহেতু আপনার মডেলে isDeleted নেই, তাই চিরস্থায়ী ডিলিট হবে)
 exports.deleteTrip = async (req, res) => {
   try {
     const { busId, tripId } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(busId) || !mongoose.Types.ObjectId.isValid(tripId)) {
-      return res.status(400).json({ success: false, message: "Invalid busId or tripId" });
-    }
+    const bus = await Bus.findById(busId);
+    if (!bus) return res.status(404).json({ success: false, message: "Bus not found" });
 
-    const bus = await Bus.findOne({ _id: busId, isDeleted: false });
-    if (!bus) {
-      return res.status(404).json({ success: false, message: "Bus not found" });
-    }
-
-    const trip = bus.trips.id(tripId);
-    if (!trip || trip.isDeleted) {
-      return res.status(404).json({ success: false, message: "Trip not found" });
-    }
-
-    // Soft delete
-    trip.isDeleted = true;
+    // সাব-ডকুমেন্ট অ্যারে থেকে ট্রিপটি রিমুভ করা
+    bus.trips.pull({ _id: tripId });
 
     await bus.save();
 
     res.json({
       success: true,
-      message: "Trip deleted successfully",
-      data: trip
+      message: "Trip deleted successfully"
     });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
+// ৪. সিঙ্গেল বাসের ডিটেইলস এবং ট্রিপ লিস্ট দেখা
+exports.getBusById = async (req, res) => {
+  try {
+    const bus = await Bus.findById(req.params.busId);
+    if (!bus) return res.status(404).json({ success: false, message: "Bus not found" });
+
+    res.json({
+      success: true,
+      data: bus
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -272,281 +235,122 @@ exports.deleteTrip = async (req, res) => {
 
 
 
-
-exports.softDeleteBus = async (req, res) => {
-  try {
-    const { busId } = req.params;
-
-    const bus = await Bus.findOneAndUpdate(
-      { busId: Number(busId) },
-      { $set: { isDeleted: true } },
-      { new: true }
-    );
-
-    if (!bus) {
-      return res.status(404).json({
-        success: false,
-        message: "Bus not found"
-      });
-    }
-
-    res.json({
-      success: true,
-      message: "Bus soft deleted"
-    });
-
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
-exports.softDeleteTrip = async (req, res) => {
-  try {
-    const { busId, tripId } = req.params;
-
-    const updated = await Bus.findOneAndUpdate(
-      { busId: Number(busId), "trips.tripId": Number(tripId) },
-      { $set: { "trips.$.isDeleted": true } },
-      { new: true }
-    );
-
-    if (!updated) {
-      return res.status(404).json({
-        success: false,
-        message: "Bus or Trip not found"
-      });
-    }
-
-    res.json({
-      success: true,
-      message: "Trip soft deleted"
-    });
-
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
-
-exports.restoreBus = async (req, res) => {
-  await Bus.findOneAndUpdate(
-    { busId: Number(req.params.busId) },
-    { $set: { isDeleted: false } }
-  );
-
-  res.json({ success: true, message: "Bus restored" });
-};
-
-exports.restoreTrip = async (req, res) => {
-  await Bus.findOneAndUpdate(
-    { busId: Number(req.params.busId), "trips.tripId": Number(req.params.tripId) },
-    { $set: { "trips.$.isDeleted": false } }
-  );
-
-  res.json({ success: true, message: "Trip restored" });
-};
+// Get Live Trips (future, running, completed)
 
 exports.getCurrentTrips = async (req, res) => {
   try {
-    const now = moment();
-    const nextOneHour = moment().add(1, "hour");
-    const currentDay = now.format("dddd");
+    // ১. বর্তমান সময় এবং দিন বের করা
+    const now = new Date();
+    
+    // সময় ফরম্যাট: HH:mm (আপনার মডেলের timeValidator অনুযায়ী)
+    const currentTime = now.getHours().toString().padStart(2, '0') + ":" + 
+                        now.getMinutes().toString().padStart(2, '0');
 
-    const buses = await Bus.find({ isDeleted: false });
+    // দিন বের করা (আপনার মডেলের enum অনুযায়ী)
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const currentDay = days[now.getDay()];
 
-    if (!buses || buses.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No buses found",
-        data: []
+    // ২. সব বাস খুঁজে বের করা (অথবা যারা isDeleted: false)
+    const buses = await Bus.find();
+
+    let runningTrips = [];
+    let upcomingTrips = [];
+
+    buses.forEach(bus => {
+      bus.trips.forEach(trip => {
+        // আজকের দিনের ট্রিপ কি না চেক করা
+        if (trip.days.includes(currentDay)) {
+          
+          // ক) Running Trip: সময় এখন from এবং to এর মাঝখানে
+          if (currentTime >= trip.from.time && currentTime <= trip.to.time) {
+            runningTrips.push({
+              busId: bus._id,
+              busName: bus.busName,
+              busNo: bus.busNo,
+              ...trip.toObject(),
+              status: "running"
+            });
+          }
+          
+          // খ) Upcoming Trip: যাত্রা শুরু হবে বর্তমান সময়ের পর (পরবর্তী ৪ ঘণ্টার মধ্যে যেগুলো আছে)
+          else if (trip.from.time > currentTime) {
+            upcomingTrips.push({
+              busId: bus._id,
+              busName: bus.busName,
+              busNo: bus.busNo,
+              ...trip.toObject(),
+              status: "upcoming"
+            });
+          }
+        }
       });
-    }
+    });
 
-    const result = buses
-      .map((bus) => {
-        const validTrips = bus.trips.filter((trip) => {
-          if (trip.isDeleted) return false;
-          if (!trip.days.includes(currentDay)) return false;
+    // ৩. Upcoming ট্রিপগুলোকে সময়ের ক্রমানুসারে সাজানো
+    upcomingTrips.sort((a, b) => a.from.time.localeCompare(b.from.time));
 
-          const start = moment(
-            `${now.format("YYYY-MM-DD")} ${trip.from.time}`,
-            "YYYY-MM-DD HH:mm"
-          );
-
-          const end = moment(
-            `${now.format("YYYY-MM-DD")} ${trip.to.time}`,
-            "YYYY-MM-DD HH:mm"
-          );
-
-          return (
-            now.isBetween(start, end) ||
-            start.isBetween(now, nextOneHour)
-          );
-        });
-
-        return {
-          busId: bus._id,
-          busNo: bus.busNo,
-          busName: bus.busName,
-          totalTrips: validTrips.length,
-          trips: validTrips,
-        };
-      })
-      .filter((bus) => bus.totalTrips > 0);
-
-    // ⚠️ No active trips
-    if (result.length === 0) {
-      return res.status(200).json({
-        success: true,
-        message: "No current or upcoming trips in the next hour",
-        currentTime: now.format("HH:mm:ss"),
-        nextOneHour: nextOneHour.format("HH:mm:ss"),
-        currentDay,
-        totalBus: 0,
-        data: []
-      });
-    }
-
-    // ✅ Success
-    return res.status(200).json({
+    // ৪. রেসপন্স পাঠানো
+    res.status(200).json({
       success: true,
-      message: "Current trips fetched successfully",
-      currentTime: now.format("HH:mm:ss"),
-      nextOneHour: nextOneHour.format("HH:mm:ss"),
+      message: "Current status fetched successfully",
+      currentTime,
       currentDay,
-      totalBus: result.length,
-      data: result
+      data: {
+        runningCount: runningTrips.length,
+        upcomingCount: upcomingTrips.length,
+        runningTrips,
+        upcomingTrips: upcomingTrips.slice(0, 5) // শুধু পরবর্তী ৫টি ট্রিপ দেখানো (অপশনাল)
+      }
     });
 
   } catch (error) {
-    // ❌ Error
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: error.message || "Server error"
+      message: error.message || "Internal Server Error"
     });
   }
 };
 
-// Get Live Trips (future, running, completed)
 exports.getTripsStatus = async (req, res) => {
   try {
-    const now = moment();
-    const nextOneHour = moment().add(1, "hour");
-    const currentDay = now.format("dddd");
+    const bus = await Bus.findById(req.params.busId);
+    if (!bus) return res.status(404).json({ success: false, message: "Bus not found" });
 
-    const buses = await Bus.find({ isDeleted: false });
+    // বর্তমান সময় বের করা (HH:mm ফরম্যাটে)
+    const now = new Date();
+    const currentTime = now.getHours().toString().padStart(2, '0') + ":" + 
+                        now.getMinutes().toString().padStart(2, '0');
 
-    // ❌ No buses
-    if (!buses || buses.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No buses found",
-        data: []
-      });
-    }
+    const trips = bus.trips.map(trip => {
+      let status = "future"; // Default
 
-    const result = buses
-      .map((bus) => {
-        const running = [];
-        const upcoming = [];
-        const completed = [];
+      if (currentTime >= trip.from.time && currentTime <= trip.to.time) {
+        status = "running";
+      } else if (currentTime > trip.to.time) {
+        status = "completed";
+      }
 
-        bus.trips.forEach((trip) => {
-          if (trip.isDeleted) return;
-          if (!trip.days.includes(currentDay)) return;
+      return {
+        ...trip.toObject(),
+        status: status
+      };
+    });
 
-          const start = moment(
-            `${now.format("YYYY-MM-DD")} ${trip.from.time}`,
-            "YYYY-MM-DD HH:mm"
-          );
-
-          const end = moment(
-            `${now.format("YYYY-MM-DD")} ${trip.to.time}`,
-            "YYYY-MM-DD HH:mm"
-          );
-
-          const tripData = {
-            tripId: trip._id,
-            tripTitle: trip.tripTitle,
-            from: trip.from,
-            to: trip.to,
-            startTime: trip.from.time,
-            endTime: trip.to.time,
-          };
-
-          if (now.isBetween(start, end)) {
-            running.push(tripData);
-          } else if (start.isBetween(now, nextOneHour)) {
-            upcoming.push(tripData);
-          } else if (end.isBefore(now)) {
-            completed.push(tripData);
-          }
-        });
-
-        // sort
-        running.sort((a, b) => a.startTime.localeCompare(b.startTime));
-        upcoming.sort((a, b) => a.startTime.localeCompare(b.startTime));
-        completed.sort((a, b) => a.startTime.localeCompare(b.startTime));
-
-        return {
-          busId: bus._id,
-          busNo: bus.busNo,
-          busName: bus.busName,
-          totalRunning: running.length,
-          totalUpcoming: upcoming.length,
-          totalCompleted: completed.length,
-          trips: { running, upcoming, completed },
-        };
-      })
-      .filter(
-        (bus) =>
-          bus.totalRunning > 0 ||
-          bus.totalUpcoming > 0 ||
-          bus.totalCompleted > 0
-      );
-
-    // ⚠️ No trips found
-    if (result.length === 0) {
-      return res.status(200).json({
-        success: true,
-        message: "No trips available for today",
-        currentTime: now.format("HH:mm:ss"),
-        nextOneHour: nextOneHour.format("HH:mm:ss"),
-        currentDay,
-        totalBus: 0,
-        data: []
-      });
-    }
-
-    // ✅ Success
-    return res.status(200).json({
+    res.json({
       success: true,
-      message: "Trips status fetched successfully",
-      currentTime: now.format("HH:mm:ss"),
-      nextOneHour: nextOneHour.format("HH:mm:ss"),
-      currentDay,
-      totalBus: result.length,
-      data: result
+      data: {
+        ...bus.toObject(),
+        trips,
+        summary: {
+          running: trips.filter(t => t.status === "running").length,
+          future: trips.filter(t => t.status === "future").length,
+          completed: trips.filter(t => t.status === "completed").length
+        }
+      }
     });
-
   } catch (error) {
-    // ❌ Error
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Server error"
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
- 
-
-
-
-
 
 

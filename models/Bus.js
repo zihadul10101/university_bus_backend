@@ -14,7 +14,7 @@ const TripSchema = new mongoose.Schema({
   }],
   from: { stop: { type: String, required: true }, time: { type: String, required: true, validate: timeValidator } },
   to: { stop: { type: String, required: true }, time: { type: String, required: true, validate: timeValidator } },
-  isDeleted: { type: Boolean, default: false }
+ 
 }, { timestamps: true });
 
 // ✅ Embedded doc pre-hook
@@ -27,7 +27,6 @@ TripSchema.pre("save", async function () {
 const BusSchema = new mongoose.Schema({
   busNo: { type: String, required: true },
   busName: { type: String, required: true },
-  isDeleted: { type: Boolean, default: false },
   trips: [TripSchema]
 }, { timestamps: true });
 

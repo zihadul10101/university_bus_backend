@@ -17,12 +17,9 @@ router.post('/create-driver',  authMiddleware(['super_admin', 'sub_admin']), cre
 router.put('/update-driver/:id',authMiddleware(['super_admin', 'sub_admin']), updateDriver);
 router.delete('/delete-driver/:id', authMiddleware(['super_admin', 'sub_admin']), deleteDriver);
 router.get('/all-driver',  authMiddleware(['super_admin', 'sub_admin']), getDrivers);
-
-
-// check later done
 router.post(
   "/assign-bus/:driverId", authMiddleware(['super_admin', 'sub_admin']),assignBus);
-//single driver check later
+
 router.get('/single-driver/:driverId', getSingleDriver);
 
 
