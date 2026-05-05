@@ -423,13 +423,16 @@ exports.assignBus = async (req, res) => {
     }
 
     // ✅ Check if bus exists
-    const bus = await Bus.findOne({ _id: busId, isDeleted: false });
+    const bus = await Bus.findOne({ _id: busId,
+       isDeleted: { $ne: true }
+       });
     if (!bus) {
       return res.status(404).json({
         success: false,
         message: "Bus not found"
       });
     }
+    
 
     // ✅ Assign bus
     const driver = await Driver.findByIdAndUpdate(

@@ -56,7 +56,7 @@ exports.login = async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000);
 
     user.otp = otp;
-    user.otpExpire = Date.now() + 5 * 60 * 1000;
+    user.otpExpire = Date.now() + 1 * 60 * 1000;
     await user.save();
 
     const emailTemplate = `
@@ -75,7 +75,7 @@ exports.login = async (req, res) => {
         </div>
         
         <p style="font-size: 14px; color: #888; text-align: center;">
-            This OTP is valid for <strong>5 minutes</strong>. Do not share this code with anyone.
+            This OTP is valid for <strong>1 minutes</strong>. Do not share this code with anyone.
         </p>
     </div>
     <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-top: 1px solid #eeeeee;">
@@ -114,7 +114,7 @@ exports.resendOtp = async (req, res) => {
 
   const newOtp = Math.floor(100000 + Math.random() * 900000);
   user.otp = newOtp;
-  user.otpExpire = Date.now() + 5 * 60 * 1000;
+  user.otpExpire = Date.now() + 1 * 60 * 1000;
   await user.save();
   const emailTemplate = `
 <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
@@ -228,7 +228,7 @@ exports.forgotPassword = async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000);
 
     user.otp = otp;
-    user.otpExpire = Date.now() + 5 * 60 * 1000;
+    user.otpExpire = Date.now() + 1 * 60 * 1000;
     await user.save();
     const emailTemplate = `
 <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
@@ -246,7 +246,7 @@ exports.forgotPassword = async (req, res) => {
         </div>
         
         <p style="font-size: 14px; color: #888; text-align: center;">
-            This OTP is valid for <strong>5 minutes</strong>. Do not share this code with anyone.
+            This OTP is valid for <strong>1 minutes</strong>. Do not share this code with anyone.
         </p>
     </div>
     <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-top: 1px solid #eeeeee;">

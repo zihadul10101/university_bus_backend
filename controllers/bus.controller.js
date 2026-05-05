@@ -46,7 +46,25 @@ exports.getAllBuses = async (req, res) => {
     });
   }
 };
+// exports.getAllBuses = async (req, res) => {
+//   try {
+//     // .populate() যোগ করা হয়েছে ড্রাইভারের নাম এবং মোবাইল নম্বর আনার জন্য
+//     const buses = await Bus.find()
+//       .populate("assignedDriver", "name mobile"); 
 
+//     return res.status(200).json({
+//       success: true,
+//       message: "Buses fetched successfully",
+//       totalBuses: buses.length,
+//       data: buses
+//     });
+//   } catch (error) {
+//     return res.status(500).json({
+//       success: false,
+//       message: error.message || "Server error"
+//     });
+//   }
+// };
 exports.getBusById = async (req, res) => {
   try {
     const { busId } = req.params;
