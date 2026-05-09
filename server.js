@@ -37,18 +37,18 @@ const limiter = rateLimit({
 app.use(limiter);
 
 
-const authLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 20
-});
+// const authLimiter = rateLimit({
+//   windowMs: 60 * 1000,
+//   max: 20
+// });
 
-app.use('/api/v1/auth', authLimiter, require('./routes/v1/auth.routes'));
+app.use('/api/v1/auth', require('./routes/v1/auth.routes'));
 
-const locationLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 100
-});
-app.use('/api/v1/location', locationLimiter ,require('./routes/v1/locationRoutes'));
+// const locationLimiter = rateLimit({
+//   windowMs: 60 * 1000,
+//   max: 100
+// });
+app.use('/api/v1/location',require('./routes/v1/locationRoutes'));
 // Routes
 app.use('/api/v1/admin', require('./routes/v1/admin.routes'));
 app.use('/api/v1/drivers', require('./routes/v1/driver.routes'));
