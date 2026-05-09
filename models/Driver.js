@@ -24,7 +24,12 @@ const DriverSchema = new mongoose.Schema({
   },
  isOnline: { type: Boolean, default: false },
   lastUpdated: { type: Date },
-  isDeleted: { type: Boolean, default: false }
+  isDeleted: { type: Boolean, default: false },
+  role: { 
+    type: String, 
+    default: "driver", 
+    enum: ["driver"]   
+  },
 
 }, { timestamps: true });
 

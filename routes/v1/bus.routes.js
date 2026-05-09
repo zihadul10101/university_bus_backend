@@ -16,14 +16,14 @@ router.post('/:busId/add-trip', authMiddleware(['super_admin', 'sub_admin']),add
  router.delete('/:busId',authMiddleware(['super_admin', 'sub_admin']), deleteBus);
 
 // // Read-only routes accessible by admin + student
- router.get("/current-trips",authMiddleware(['super_admin', 'sub_admin','student']), getCurrentTrips);
- router.get("/trip-status", authMiddleware(['super_admin', 'sub_admin','student']),getTripsStatus);
+ router.get("/current-trips",authMiddleware(['super_admin', 'sub_admin','student','driver']), getCurrentTrips);
+ router.get("/trip-status", authMiddleware(['super_admin', 'sub_admin','student','driver']),getTripsStatus);
 
 
 
 
- router.get('/all-bus',authMiddleware(['super_admin', 'sub_admin','student']), getAllBuses);
-router.get('/:busId',authMiddleware(['super_admin', 'sub_admin','student']),getBusById);
+ router.get('/all-bus',authMiddleware(['super_admin', 'sub_admin','student','driver']), getAllBuses);
+router.get('/:busId',authMiddleware(['super_admin', 'sub_admin','student','driver']),getBusById);
 
 
 module.exports = router;

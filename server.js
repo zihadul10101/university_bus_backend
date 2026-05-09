@@ -7,7 +7,7 @@ const cors = require("cors");
 
 const connectDB = require("./config/db");
 const createDefaultAdmin = require("./utils/createDefaultAdmin");
-const socketHandler = require("./sockets/socketHandler");
+const { socketHandler } = require("./sockets/socketHandler");
 
 dotenv.config();
 

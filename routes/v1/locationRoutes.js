@@ -1,10 +1,13 @@
 const router = require('express').Router();
 
 const {
- getRoomStatus
+ getRoomStatus,
+ getAllLiveRooms
 
 } = require('../../controllers/locationController');
-// লাইভ ট্র্যাকিং রুমের তথ্য দেখার রুট
-router.get('/status/:roomId', getRoomStatus);
+
+//router.get('/status/:roomId', getRoomStatus);
+router.get('/active-trips', getAllLiveRooms); // সব লাইভ বাসের জন্য
+router.get('/status/:roomId', getRoomStatus); // নির্দিষ্ট বাসের জন্য
 
 module.exports = router;

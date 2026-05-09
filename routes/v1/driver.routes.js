@@ -8,7 +8,8 @@ const {
   updateLocation,
   getNearbyDrivers,
   assignBus,
-  getSingleDriver
+  getSingleDriver,
+  updateStatus
 } = require('../../controllers/driver.controller');
 const authMiddleware = require('../../middleware/auth.middleware');
 
@@ -25,9 +26,9 @@ router.get('/single-driver/:driverId', getSingleDriver);
 // Driver login 
 router.post('/login', driverLogin);
 
-// Driver update location (requires driver token)
 router.put('/:id/location', authMiddleware(['driver']), updateLocation);
-// GET nearest drivers
+// Driver status toggle (Online/Offline)
+router.patch('/update-status/:id', authMiddleware(['driver']), updateStatus);
 router.get("/nearby",getNearbyDrivers);
 
 

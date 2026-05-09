@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/sendEmail");
 const generateToken = require("../utils/generateToken");
+const Driver = require("../models/Driver");
 
 // LOGIN
 
@@ -312,6 +313,7 @@ exports.resetPassword = async (req, res) => {
 };
 
 
+
 exports.getMe = async (req, res) => {
   try {
     const { id, role } = req.user;
@@ -327,6 +329,13 @@ exports.getMe = async (req, res) => {
     // Student
     else if (role === "student") {
       user = await Student.findById(id)
+        .select("-password -otp -otpExpire");
+    }
+
+    // --- নতুন যোগ করা অংশ: Driver ---
+    else if (role === "driver") {
+      // আপনার ড্রাইভার মডেলের নাম (যেমন: Driver) ব্যবহার করুন
+      user = await Driver.findById(id)
         .select("-password -otp -otpExpire");
     }
 
@@ -358,3 +367,51 @@ exports.getMe = async (req, res) => {
     });
   }
 };
+
+
+// exports.getMe = async (req, res) => {
+//   try {
+//     const { id, role } = req.user;
+
+//     let user;
+
+//     // Admin (super_admin / sub_admin)
+//     if (role === "super_admin" || role === "sub_admin") {
+//       user = await Admin.findById(id)
+//         .select("-password -otp -otpExpire");
+//     }
+
+//     // Student
+//     else if (role === "student") {
+//       user = await Student.findById(id)
+//         .select("-password -otp -otpExpire");
+//     }
+
+//     // Not valid role
+//     else {
+//       return res.status(403).json({
+//         success: false,
+//         message: "Invalid role"
+//       });
+//     }
+
+//     if (!user) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "User not found"
+//       });
+//     }
+
+//     res.json({
+//       success: true,
+//       role,
+//       data: user
+//     });
+
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };
