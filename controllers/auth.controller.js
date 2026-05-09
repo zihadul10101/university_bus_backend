@@ -9,7 +9,108 @@ const Driver = require("../models/Driver");
 // LOGIN
 
 
+// exports.login = async (req, res) => {
+//   console.log("LOGIN HIT");
+//   try {
+//     const { email, password } = req.body;
+
+//     let user = await Admin.findOne({ email });
+//     let finalRole = null;
+
+//     if (user) {
+
+//       finalRole = user.role;
+//     } else {
+
+//       user = await Student.findOne({ email });
+//       if (user) {
+//         finalRole = "student";
+//       }
+//     }
+
+
+//     if (!user) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid email"
+//       });
+//     }
+
+//     console.log("findrole", finalRole);
+
+//     const cleanPassword = password.trim();
+//     console.log("clean pass", cleanPassword);
+
+//     const isMatch = await bcrypt.compare(cleanPassword, user.password);
+
+//     console.log(isMatch);
+
+
+
+//     if (!isMatch) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid password"
+//       });
+//     }
+
+//     // Generate OTP for both admin and student
+//     const otp = Math.floor(100000 + Math.random() * 900000);
+
+//     user.otp = otp;
+//     user.otpExpire = Date.now() + 1 * 60 * 1000;
+//     await user.save();
+
+//     const emailTemplate = `
+// <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+//     <div style="background-color: #007AFF; padding: 20px; text-align: center;">
+//         <h1 style="color: white; margin: 0; font-size: 24px;">UniBus Verification</h1>
+//     </div>
+//     <div style="padding: 30px; background-color: #ffffff;">
+//         <p style="font-size: 16px; color: #333;">Hello,</p>
+//         <p style="font-size: 16px; color: #555;">Your one-time password (OTP) for logging into your UniBus account is:</p>
+
+//         <div style="text-align: center; margin: 30px 0;">
+//             <span style="font-size: 32px; font-weight: bold; color: #007AFF; letter-spacing: 8px; border: 2px dashed #007AFF; padding: 10px 20px; border-radius: 8px; background-color: #f0f7ff;">
+//                 ${otp}
+//             </span>
+//         </div>
+
+//         <p style="font-size: 14px; color: #888; text-align: center;">
+//             This OTP is valid for <strong>1 minutes</strong>. Do not share this code with anyone.
+//         </p>
+//     </div>
+//     <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-top: 1px solid #eeeeee;">
+//         <p style="font-size: 12px; color: #aaa; margin: 0;">
+//             &copy; 2026 UniBus System | Southern University Bangladesh
+//         </p>
+//     </div>
+// </div>
+// `;
+
+//     await sendEmail(
+//       user.email,
+//       "UniBus Login OTP",
+//       emailTemplate
+//     );
+//     res.json({
+//       success: true,
+//       message: "OTP sent to your email",
+//       userId: user._id,
+//       role: finalRole
+//     });
+
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };
+
 exports.login = async (req, res) => {
+  console.log("LOGIN HIT");
+
   try {
     const { email, password } = req.body;
 
@@ -17,17 +118,12 @@ exports.login = async (req, res) => {
     let finalRole = null;
 
     if (user) {
-    
       finalRole = user.role;
     } else {
-    
       user = await Student.findOne({ email });
-      if (user) {
-        finalRole = "student";
-      }
+      if (user) finalRole = "student";
     }
 
-   
     if (!user) {
       return res.status(400).json({
         success: false,
@@ -35,16 +131,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    console.log("findrole", finalRole);
-
-    const cleanPassword = password.trim();
-    console.log("clean pass", cleanPassword);
-
-    const isMatch = await bcrypt.compare(cleanPassword, user.password);
-
-    console.log(isMatch);
-
-
+    const isMatch = await bcrypt.compare(password.trim(), user.password);
 
     if (!isMatch) {
       return res.status(400).json({
@@ -53,45 +140,37 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Generate OTP for both admin and student
+    // OTP generate
     const otp = Math.floor(100000 + Math.random() * 900000);
 
     user.otp = otp;
     user.otpExpire = Date.now() + 1 * 60 * 1000;
     await user.save();
 
+    // email template INSIDE scope (fix)
     const emailTemplate = `
-<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
-    <div style="background-color: #007AFF; padding: 20px; text-align: center;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">UniBus Verification</h1>
+<div style="font-family: Arial, sans-serif; max-width:600px;margin:auto;border:1px solid #ddd;border-radius:10px;overflow:hidden">
+  <div style="background:#007AFF;padding:20px;text-align:center;color:white">
+    <h2>UniBus Verification</h2>
+  </div>
+
+  <div style="padding:20px">
+    <p>Your OTP for login is:</p>
+
+    <div style="font-size:30px;font-weight:bold;letter-spacing:5px;color:#007AFF;text-align:center;margin:20px 0">
+      ${otp}
     </div>
-    <div style="padding: 30px; background-color: #ffffff;">
-        <p style="font-size: 16px; color: #333;">Hello,</p>
-        <p style="font-size: 16px; color: #555;">Your one-time password (OTP) for logging into your UniBus account is:</p>
-        
-        <div style="text-align: center; margin: 30px 0;">
-            <span style="font-size: 32px; font-weight: bold; color: #007AFF; letter-spacing: 8px; border: 2px dashed #007AFF; padding: 10px 20px; border-radius: 8px; background-color: #f0f7ff;">
-                ${otp}
-            </span>
-        </div>
-        
-        <p style="font-size: 14px; color: #888; text-align: center;">
-            This OTP is valid for <strong>1 minutes</strong>. Do not share this code with anyone.
-        </p>
-    </div>
-    <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-top: 1px solid #eeeeee;">
-        <p style="font-size: 12px; color: #aaa; margin: 0;">
-            &copy; 2026 UniBus System | Southern University Bangladesh
-        </p>
-    </div>
+
+    <p>This OTP is valid for 1 minute.</p>
+  </div>
+
+  <div style="background:#f5f5f5;padding:10px;text-align:center;font-size:12px">
+    © 2026 UniBus System
+  </div>
 </div>
 `;
 
-    await sendEmail(
-      user.email,
-      "UniBus Login OTP",
-      emailTemplate
-    );
+    // ⚡ respond first (important)
     res.json({
       success: true,
       message: "OTP sent to your email",
@@ -99,7 +178,18 @@ exports.login = async (req, res) => {
       role: finalRole
     });
 
+    // ⚡ email async (non-blocking)
+    setImmediate(async () => {
+      try {
+        await sendEmail(user.email, "UniBus Login OTP", emailTemplate);
+      } catch (err) {
+        console.log("EMAIL ERROR:", err.message);
+      }
+    });
+
   } catch (error) {
+    console.log("LOGIN ERROR:", error);
+
     res.status(500).json({
       success: false,
       message: error.message
