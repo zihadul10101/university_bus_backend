@@ -117,7 +117,7 @@ exports.login = async (req, res) => {
     let finalRole = null;
 
     if (user) {
-      finalRole = user.role;
+      finalRole = user.role; // super_admin or sub_admin
     } else {
       user = await Student.findOne({ email });
 
@@ -145,7 +145,6 @@ exports.login = async (req, res) => {
       });
     }
 
-    // JWT Token Generate
     const token = jwt.sign(
       {
         id: user._id,
@@ -157,18 +156,22 @@ exports.login = async (req, res) => {
       }
     );
 
-    res.status(200).json({
+    // Remove sensitive fields
+    const userData = user.toObject();
+    delete userData.password;
+    delete userData.otp;
+    delete userData.otpExpire;
+
+    return res.status(200).json({
       success: true,
       message: "Login successful",
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        role: finalRole,
-      },
+      role: finalRole,
+      user: userData,
     });
+
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message,
     });
