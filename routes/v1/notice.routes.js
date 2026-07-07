@@ -15,3 +15,4 @@ router.put("/updated-notice/:id",authMiddleware(['super_admin', 'sub_admin']),up
 router.delete("/:id",authMiddleware(['super_admin', 'sub_admin']),deleteNotice);
 
 module.exports = router;
+

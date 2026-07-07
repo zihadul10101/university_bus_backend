@@ -6,73 +6,6 @@ const mongoose = require("mongoose");
 
 
 
-// exports.createDriver = async (req, res) => {
-//   try {
-//     const { name, mobile, licenseNumber, loginName, password } = req.body;
-
-//     // ✅ Check duplicates
-//     const existingDriver = await Driver.findOne({
-//       $or: [{ mobile }, { licenseNumber }, { loginName }]
-//     });
-
-//     if (existingDriver) {
-//       const duplicateField =
-//         existingDriver.mobile === mobile
-//           ? "mobile"
-//           : existingDriver.licenseNumber === licenseNumber
-//           ? "licenseNumber"
-//           : "loginName";
-
-//       return res.status(400).json({
-//         success: false,
-//         message: `Duplicate value for field: ${duplicateField}`,
-//         field: duplicateField,
-//         value: req.body[duplicateField]
-//       });
-//     }
-
-//     // 🔐 Hash password
-//     const hashedPassword = await bcrypt.hash(password, 10);
-
-//     // ✅ Create driver
-//     const driver = await Driver.create({
-//       name,
-//       mobile,
-//       licenseNumber,
-//       loginName,
-//       password: hashedPassword,
-//       // busId: bus._id,
-//       createdBy: req.user.id
-//     });
-
-//     // Hide password in response
-//     driver.password = undefined;
-
-//     return res.status(201).json({
-//       success: true,
-//       message: "Driver created successfully",
-//       data: driver
-//     });
-
-//   } catch (err) {
-//     // Validation errors
-//     if (err.name === "ValidationError") {
-//       const errors = Object.values(err.errors).map(e => e.message);
-//       return res.status(400).json({
-//         success: false,
-//         message: "Validation Error",
-//         errors
-//       });
-//     }
-
-//     // Generic error
-//     return res.status(500).json({
-//       success: false,
-//       message: err.message || "Server error"
-//     });
-//   }
-// };
-
 
 exports.createDriver = async (req, res) => {
   try {
@@ -115,6 +48,7 @@ exports.createDriver = async (req, res) => {
   }
 };
 
+
 exports.updateDriver = async (req, res) => {
   try {
     const driver = await Driver.findById(req.params.id);
@@ -134,19 +68,31 @@ exports.updateDriver = async (req, res) => {
       });
     }
 
-    const { name, mobile, licenseNumber, busId } = req.body;
+    // 🔍 req.body থেকে password-ও ডিস্ট্রাকচার করে নিন
+    const { name, mobile, licenseNumber, busId, password } = req.body;
 
     if (name) driver.name = name;
     if (mobile) driver.mobile = mobile;
     if (licenseNumber) driver.licenseNumber = licenseNumber;
-    if (busId) driver.busId = busId; // ✅ FIX (bus না, busId)
+    if (busId) driver.busId = busId; 
+
+    // 🔐 পাসওয়ার্ড চেঞ্জের মূল লজিক
+    if (password && password.trim().length > 0) {
+      // নতুন পাসওয়ার্ডটিকে ১০ রাউন্ড সল্ট দিয়ে হ্যাশ করে মডেলে অ্যাসাইন করা হচ্ছে
+      const salt = await bcrypt.genSalt(10);
+      driver.password = await bcrypt.hash(password, 10);
+    }
 
     await driver.save();
+
+    // রেসপন্সে পাঠানোর আগে সিকিউরিটির জন্য পাসওয়ার্ড ফিল্ডটি অবজেক্ট থেকে হাইড করে দিন
+    const driverResponse = driver.toObject();
+    delete driverResponse.password;
 
     res.json({
       success: true,
       message: "Driver updated successfully",
-      data: driver
+      data: driverResponse
     });
 
   } catch (err) {
@@ -155,6 +101,9 @@ exports.updateDriver = async (req, res) => {
 };
 
 // Delete driver (soft delete)
+
+
+
 exports.deleteDriver = async (req, res) => {
   try {
     const driver = await Driver.findById(req.params.id);
@@ -203,79 +152,6 @@ exports.getDrivers = async (req, res) => {
   }
 };
 
-
-// exports.driverLogin = async (req, res) => {
-//   try {
-//     const { loginName, password } = req.body;
-//     console.log(loginName);
-    
-//     // ❌ Missing fields
-//     if (!loginName || !password) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Login name and password are required"
-//       });
-//     }
-
-//     // ✅ Find driver + populate bus
-//     const driver = await Driver.findOne({
-//       loginName
-//     });
-//      console.log("driver",driver);
-  
-//     if (!driver) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Driver not found"
-//       });
-//     }
-
-//     // ❌ Invalid password
-//     const valid = await bcrypt.compare(password, driver.password);
-//     if (!valid) {
-//       return res.status(401).json({
-//         success: false,
-//         message: "Invalid password"
-//       });
-//     }
-
-//     // ✅ Set online
-//     driver.isOnline = true;
-//     await driver.save();
-
-//     // 🔐 Generate token
-//     const token = jwt.sign(
-//       { id: driver._id, role: "driver" },
-//       process.env.JWT_SECRET,
-//       { expiresIn: "1d" }
-//     );
-
-//     // Hide password
-//     driver.password = undefined;
-
-//     // ✅ Success
-//     return res.status(200).json({
-//       success: true,
-//       message: "Login successful",
-//       token,
-//       data: {
-//         id: driver._id,
-//         name: driver.name,
-//         mobile: driver.mobile,
-//         licenseNumber: driver.licenseNumber,
-//         isOnline: driver.isOnline,
-//         bus: driver.busId // ✅ fixed (was driver.bus)
-//       }
-//     });
-
-//   } catch (err) {
-//     // ❌ Error
-//     return res.status(500).json({
-//       success: false,
-//       message: err.message || "Server error"
-//     });
-//   }
-// };
 
 
 
@@ -351,48 +227,240 @@ exports.driverLogin = async (req, res) => {
   }
 };
 
+// exports.getSingleDriver = async (req, res) => {
+//   try {
+//     const { driverId } = req.params;
+    
+//     if (!mongoose.Types.ObjectId.isValid(driverId)) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid driver ID"
+//       });
+//     }
+
+//     // ✅ বাস আইডির সব ফিল্ড (trips সহ) পপুলেট করা হয়েছে
+//     const driver = await Driver.findOne({
+//       _id: driverId,
+//       isDeleted: false
+//     }).populate("busId"); 
+
+//     if (!driver) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Driver not found"
+//       });
+//     }
+
+//     // পাসওয়ার্ড হাইড করা
+//     const driverObj = driver.toObject();
+//     delete driverObj.password;
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Driver fetched successfully",
+//       data: driverObj
+//     });
+
+//   } catch (error) {
+//     return res.status(500).json({
+//       success: false,
+//       message: error.message || "Server error"
+//     });
+//   }
+// };
+
+
+// ব্যাকএন্ড কন্ট্রোলারের getSingleDriver ফাংশনটি এভাবে সেফ করুন:
 exports.getSingleDriver = async (req, res) => {
   try {
-    const { driverId } = req.params;
-    
-    if (!mongoose.Types.ObjectId.isValid(driverId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid driver ID"
-      });
-    }
+    // আপনার রাউটে যদি /single-driver/:driverId থাকে, তবে driverId ই আসবে
+    const { driverId } = req.params; 
 
-    // ✅ বাস আইডির সব ফিল্ড (trips সহ) পপুলেট করা হয়েছে
-    const driver = await Driver.findOne({
-      _id: driverId,
-      isDeleted: false
-    }).populate("busId"); 
+    // ডাটাবেজে ড্রাইভারটি খোঁজা এবং তার বাস পপুলেট করা
+    const driver = await Driver.findById(driverId).populate('busId');
 
     if (!driver) {
-      return res.status(404).json({
-        success: false,
-        message: "Driver not found"
-      });
+      return res.status(404).json({ success: false, message: "Driver not found" });
     }
 
-    // পাসওয়ার্ড হাইড করা
-    const driverObj = driver.toObject();
-    delete driverObj.password;
-
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      message: "Driver fetched successfully",
-      data: driverObj
+      data: driver
     });
-
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Server error"
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
+// 🚌 ড্রাইভার এবং বাস লিঙ্ক করার ফিক্সড কন্ট্রোলার
+exports.assignBus = async (req, res) => {
+  try {
+    // 🎯 ডাটা সোর্স ঠিক করা হলো: driverId আসছে params থেকে, busId আসছে body থেকে
+    const { driverId } = req.params;
+    const { busId } = req.body;
+
+    console.log(`📥 API Call -> Driver ID: ${driverId} | Target Bus ID: ${busId}`);
+
+    if (!driverId || !busId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Driver ID or Bus ID is missing." 
+      });
+    }
+
+    // ১. জিয়াদুল-৩ (টার্গেট ড্রাইভার) কে ডাটাবেজে খোঁজা
+    const targetDriver = await Driver.findById(driverId);
+    if (!targetDriver) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Driver not found." 
+      });
+    }
+
+    // 🎯 ২. ওটো-রিমুভ লজিক: এই বাসে (Bus 06) আগে যে ড্রাইভার (Zihadul1) ছিল তাকে খুঁজে বের করা
+    const previousDriver = await Driver.findOne({ busId: busId });
+    
+    // যদি অন্য কোনো ড্রাইভার অলরেডি এই বাসে থাকে, তার বাস রিমুভ (null) করে দেওয়া
+    if (previousDriver && previousDriver._id.toString() !== driverId) {
+      previousDriver.busId = null;
+      await previousDriver.save();
+      console.log(`🧹 ${previousDriver.name} এর কাছ থেকে বাস মুক্ত করা হয়েছে।`);
+    }
+
+    // ৩. টার্গেট ড্রাইভারের (Zihadul3) যদি আগে কোনো ওল্ড বাস থেকে থাকে, সেই বাসের ড্রাইভার ফিল্ড নাল করা
+    if (targetDriver.busId && targetDriver.busId.toString() !== busId) {
+      await Bus.findByIdAndUpdate(targetDriver.busId, { driverId: null });
+    }
+
+    // ৪. টার্গেট ড্রাইভারের প্রোফাইলে নতুন বাস অ্যাসাইন করা
+    targetDriver.busId = busId;
+    await targetDriver.save();
+
+    // ৫. বাসের মডেলে ড্রাইভারের রেফারেন্স আপডেট করা
+    await Bus.findByIdAndUpdate(busId, { driverId: driverId });
+
+    return res.status(200).json({
+      success: true,
+      message: "Bus assigned successfully! Previous driver removed automatically.",
+      data: targetDriver
+    });
+
+  } catch (error) {
+    console.error("🚨 Backend Assign Bus Error:", error);
+    return res.status(500).json({ 
+      success: false, 
+      message: "Internal Server Error", 
+      error: error.message 
+    });
+  }
+};
+// exports.assignBus = async (req, res) => {
+//   try {
+//     const { driverId } = req.params;
+//     const { busId } = req.body;
+
+//     if (!driverId || !busId) {
+//       return res.status(400).json({ success: false, message: "Driver ID and Bus ID are required" });
+//     }
+
+//     const currentDriver = await Driver.findById(driverId);
+//     if (!currentDriver) {
+//       return res.status(404).json({ success: false, message: "Driver not found" });
+//     }
+
+//     // ১. ওল্ড বাস ক্লিনআপ (যদি আগে কোনো বাস অ্যাসাইন থাকে তবে তার driverId ও driver ফিল্ড রিমুভ হবে)
+//     if (currentDriver.busId) {
+//       await Bus.findByIdAndUpdate(
+//         currentDriver.busId, 
+//         { 
+//           $set: { driverId: null },
+//           $unset: { driver: "" } // 🎯 পুরোনো 'driver' ফিল্ড ডাটাবেজ থেকে মুছে ফেলার জন্য
+//         }
+//       );
+//     }
+
+//     // ২. ⚡ নতুন বাসে শুধুমাত্র 'driverId' সেট করা এবং পুরোনো 'driver' ফিল্ড রিমুভ করা
+//     const updatedBus = await Bus.findByIdAndUpdate(
+//       busId, 
+//       { 
+//         $set: { driverId: driverId }, 
+//         $unset: { driver: "" } // 🎯 এই বাসের অবজেক্ট থেকেও পুরোনো 'driver' কি (key) ডিলিট হয়ে যাবে
+//       }, 
+//       { new: true, strict: true } // strict: true স্কিমার বাইরের ফিল্ড সেভ হতে বাধা দেবে
+//     );
+
+//     if (!updatedBus) {
+//       return res.status(404).json({ success: false, message: "Bus not found in database" });
+//     }
+
+//     // ৩. ড্রাইভারের নিজস্ব ডাটায় বাস আইডি সেভ করা
+//     currentDriver.busId = busId;
+//     await currentDriver.save();
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Bus assigned and data cleaned successfully!",
+//       data: currentDriver
+//     });
+
+//   } catch (error) {
+//     console.error("Error in assignBus controller:", error);
+//     return res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
+// exports.assignBus = async (req, res) => {
+//   try {
+//     const { driverId } = req.params;
+//     const { busId } = req.body;
+
+//     if (!driverId || !busId) {
+//       return res.status(400).json({ success: false, message: "Driver ID and Bus ID are required" });
+//     }
+
+//     // ১. ড্রাইভার চেক করা
+//     const currentDriver = await Driver.findById(driverId);
+//     if (!currentDriver) {
+//       return res.status(404).json({ success: false, message: "Driver not found" });
+//     }
+
+//     // ২. ওল্ড বাস ক্লিনআপ (যদি আগে কোনো বাস অ্যাসাইন থাকে)
+//     if (currentDriver.busId) {
+//       await Bus.findByIdAndUpdate(
+//         currentDriver.busId, 
+//         { $set: { driver: null } }, // 🎯 $set অপারেটর দিয়ে ফোর্স করা হচ্ছে
+//         { new: true, strict: false }
+//       );
+//     }
+
+//     // ৩. ⚡ নতুন বাসে ড্রাইভার আইডি যোগ করা (ফোর্স আপডেট)
+//     const updatedBus = await Bus.findByIdAndUpdate(
+//       busId, 
+//       { $set: { driver: driverId } }, // 🎯 মঙ্গোডিবিকে বাধ্য করা হচ্ছে নতুন ফিল্ড 'driver' তৈরি করে আইডি বসাতে
+//       { new: true, strict: false }    // strict: false নিশ্চিত করে স্কিমা ক্যাশ ইগনোর করতে
+//     );
+
+//     if (!updatedBus) {
+//       return res.status(404).json({ success: false, message: "Bus not found in database" });
+//     }
+
+//     // ৪. ড্রাইভারের নিজস্ব ডাটায় বাস আইডি সেভ করা
+//     currentDriver.busId = busId;
+//     await currentDriver.save();
+
+//     console.log("✅ Updated Bus Data in DB:", updatedBus); // টার্মিনালে চেক করার জন্য লগ
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Bus assigned and updated successfully everywhere!",
+//       data: currentDriver
+//     });
+
+//   } catch (error) {
+//     console.error("Error in assignBus controller:", error);
+//     return res.status(500).json({ success: false, message: error.message });
+//   }
+// };
 // exports.getSingleDriver = async (req, res) => {
 //   try {
 //     const { driverId } = req.params;
@@ -440,67 +508,67 @@ exports.getSingleDriver = async (req, res) => {
 //   }
 // };
 
-exports.assignBus = async (req, res) => {
-  try {
-    const { driverId } = req.params;
-    const { busId } = req.body;
-  console.log("BUSID",busId);
-  console.log("driver id",driverId);
+// exports.assignBus = async (req, res) => {
+//   try {
+//     const { driverId } = req.params;
+//     const { busId } = req.body;
+//   console.log("BUSID",busId);
+//   console.log("driver id",driverId);
   
   
-    // ❌ Validate driverId and busId
-    if (!mongoose.Types.ObjectId.isValid(driverId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid driver ID"
-      });
-    }
-    if (!mongoose.Types.ObjectId.isValid(busId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid bus ID"
-      });
-    }
+//     // ❌ Validate driverId and busId
+//     if (!mongoose.Types.ObjectId.isValid(driverId)) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid driver ID"
+//       });
+//     }
+//     if (!mongoose.Types.ObjectId.isValid(busId)) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid bus ID"
+//       });
+//     }
 
-    // ✅ Check if bus exists
-    const bus = await Bus.findOne({ _id: busId,
-       isDeleted: { $ne: true }
-       });
-    if (!bus) {
-      return res.status(404).json({
-        success: false,
-        message: "Bus not found"
-      });
-    }
+//     // ✅ Check if bus exists
+//     const bus = await Bus.findOne({ _id: busId,
+//        isDeleted: { $ne: true }
+//        });
+//     if (!bus) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Bus not found"
+//       });
+//     }
     
 
-    // ✅ Assign bus
-    const driver = await Driver.findByIdAndUpdate(
-      driverId,
-      { busId: bus._id },
-      { new: true }
-    );
+//     // ✅ Assign bus
+//     const driver = await Driver.findByIdAndUpdate(
+//       driverId,
+//       { busId: bus._id },
+//       { new: true }
+//     );
 
-    if (!driver) {
-      return res.status(404).json({
-        success: false,
-        message: "Driver not found"
-      });
-    }
+//     if (!driver) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Driver not found"
+//       });
+//     }
 
-    return res.status(200).json({
-      success: true,
-      message: "Driver assigned to bus successfully",
-      data: driver
-    });
+//     return res.status(200).json({
+//       success: true,
+//       message: "Driver assigned to bus successfully",
+//       data: driver
+//     });
 
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      message: err.message || "Server error"
-    });
-  }
-};
+//   } catch (err) {
+//     return res.status(500).json({
+//       success: false,
+//       message: err.message || "Server error"
+//     });
+//   }
+// };
 // Update live location
 exports.getLiveDrivers = async (req, res) => {
   try {

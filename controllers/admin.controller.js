@@ -170,4 +170,21 @@ exports.deleteSubAdmin = async (req, res) => {
   }
 };
 
+//single sub admin 
+
+exports.getSingleSubAdmin = async (req, res) => {
+  try {
+    const { id } = req.query; // 👈 নিশ্চিত করুন এখানে query ব্যবহার করা হয়েছে, params নয়!
+    
+    const subAdmin = await Admin.findById(id);
+    if (!subAdmin) {
+      return res.status(404).json({ success: false, message: "Sub Admin not found" });
+    }
+    
+    return res.status(200).json({ success: true, data: subAdmin });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 

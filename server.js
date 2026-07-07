@@ -54,8 +54,10 @@ app.use('/api/v1/admin', require('./routes/v1/admin.routes'));
 app.use('/api/v1/drivers', require('./routes/v1/driver.routes'));
 app.use('/api/v1/buses', require('./routes/v1/bus.routes'));
 app.use('/api/v1/students', require('./routes/v1/student.routes'));
-app.use('/api/v1/notice', require('./routes/v1/notice.routes'));
-app.use('/api/v1/notification', require('./routes/v1/notification.routes'));
+app.use('/api/v1/notices', require('./routes/v1/notice.routes'));
+
+app.use("/api/v1/research", require('./routes/v1/researchRoutes'));
+app.use("/api/v1/entrepreneur", require('./routes/v1/studentBusiness.routes'));
 
 
 
@@ -63,9 +65,13 @@ const server = http.createServer(app);
 
 
 const io = new Server(server, {
-  cors: { origin: "*" }
+  pingTimeout: 60000,  // ৬০ সেকেন্ড
+  pingInterval: 25000, // ২৫ সেকেন্ড
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
 });
-
 socketHandler(io);
 
 
