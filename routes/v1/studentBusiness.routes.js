@@ -12,7 +12,7 @@ const payCtrl = require('../../controllers/entrepreneur/paymentController');
 // PACKAGES
 // ════════════════════════════════════════════════════════════════
 router.get('/packages', pkgCtrl.getAllPackages);
-router.get('/packages/:id', authMiddleware(['super_admin', 'sub_admin']), pkgCtrl.getPackageById);
+router.get('/packages/:id', pkgCtrl.getPackageById);
 router.post('/packages', authMiddleware(['super_admin', 'sub_admin']), pkgCtrl.createPackage);
 router.patch('/packages/:id', authMiddleware(['super_admin', 'sub_admin']), pkgCtrl.updatePackage);
 router.delete('/packages/:id', authMiddleware(['super_admin', 'sub_admin']), pkgCtrl.deletePackage);

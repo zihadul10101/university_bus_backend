@@ -87,7 +87,7 @@ exports.submitAd = async (req, res) => {
     });
 
     // Link payment → ad
-    payment.advertisement = ad._d;
+    payment.advertisement = ad._id;
     await payment.save();
 
     // Mark coupon as used
@@ -123,36 +123,7 @@ exports.getMyAds = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
-// exports.getMyAds = async (req, res) => {
-//   try {
-//     console.log("req.user =", req.user);
-//     console.log("Searching owner =", req.user.id);
 
-//     const ads = await Advertisement.find({
-//       owner: req.user.id,
-//     });
-
-//     console.log("Ads found =", ads.length);
-//     // const ads = await Advertisement.find({
-//     //   owner: req.user.id,
-//     // })
-//     //   .populate("business", "name category logo")
-//     //   .populate("package", "name durationDays price")
-//     //   .populate("payment", "status finalAmount paymentMethod")
-//     //   .sort({ createdAt: -1 });
-
-//     res.json({
-//       success: true,
-//       total: ads.length,
-//       data: ads,
-//     });
-//   } catch (err) {
-//     res.status(500).json({
-//       success: false,
-//       message: err.message,
-//     });
-//   }
-// };
 // ── Get all approved ads (public feed) ────────────────────────────────────────
 exports.getApprovedAds = async (req, res) => {
   try {
@@ -244,7 +215,7 @@ exports.renewAd = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Ad not found.' });
 
     const pkg = await Package.findById(packageId);
-    if (!pkg)
+    if (!pkg || !pkg.isActive)
       return res.status(404).json({ success: false, message: 'Package not found.' });
 
     let originalAmount = pkg.price;
@@ -254,13 +225,15 @@ exports.renewAd = async (req, res) => {
 
     if (couponCode) {
       couponDoc = await Coupon.findOne({ code: couponCode.toUpperCase() });
-      if (couponDoc) {
-        const validity = couponDoc.isValid(req.user._id, originalAmount);
-        if (validity.valid) {
-          discountAmount = couponDoc.calcDiscount(originalAmount);
-          finalAmount = originalAmount - discountAmount;
-        }
-      }
+      if (!couponDoc)
+        return res.status(404).json({ success: false, message: 'Coupon not found.' });
+
+      const validity = couponDoc.isValid(req.user._id, originalAmount);
+      if (!validity.valid)
+        return res.status(400).json({ success: false, message: validity.message });
+
+      discountAmount = couponDoc.calcDiscount(originalAmount);
+      finalAmount = originalAmount - discountAmount;
     }
 
     const isFree = finalAmount === 0 || pkg.isFree;
@@ -295,6 +268,13 @@ exports.renewAd = async (req, res) => {
 
     payment.advertisement = newAd._id;
     await payment.save();
+
+    // Mark coupon as used (was missing — allowed unlimited reuse via renewals)
+    if (couponDoc) {
+      couponDoc.usedBy.push({ user: req.user._id });
+      couponDoc.usedCount += 1;
+      await couponDoc.save();
+    }
 
     res.status(201).json({
       success: true,
