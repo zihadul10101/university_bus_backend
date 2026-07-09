@@ -6,9 +6,9 @@ const {
 
 } = require('../../controllers/locationController');
 
-//router.get('/status/:roomId', getRoomStatus);
-router.get('/active-trips', getAllLiveRooms); // সব লাইভ বাসের জন্য
-router.get('/status/:roomId', getRoomStatus); // নির্দিষ্ট বাসের জন্য
+
+router.get('/active-trips', getAllLiveRooms); 
+router.get('/status/:roomId', getRoomStatus); 
 
 
 module.exports = router;

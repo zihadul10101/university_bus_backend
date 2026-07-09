@@ -27,7 +27,7 @@ app.get('/', (req, res) => {
 
 const limiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 30,
+  max: 120,
   message: {
     success: false,
     message: "Too many requests, please try again later"
@@ -36,18 +36,9 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
-
-// const authLimiter = rateLimit({
-//   windowMs: 60 * 1000,
-//   max: 20
-// });
-
 app.use('/api/v1/auth', require('./routes/v1/auth.routes'));
 
-// const locationLimiter = rateLimit({
-//   windowMs: 60 * 1000,
-//   max: 100
-// });
+
 app.use('/api/v1/location',require('./routes/v1/locationRoutes'));
 // Routes
 app.use('/api/v1/admin', require('./routes/v1/admin.routes'));

@@ -2,22 +2,16 @@ const router = require("express").Router();
 const authMiddleware = require("../../middleware/auth.middleware");
 const {
   login,
-  verifyOtp,
   forgotPassword,
   resetPassword,
-  getMe,
-  resendOtp
+  getMe
 } = require("../../controllers/auth.controller");
 
 
 router.post("/login", login);
-router.post("/verify-otp",verifyOtp);
-router.post("/resend-otp",resendOtp);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
-
 router.get("/me", authMiddleware(['super_admin', 'sub_admin','student',"driver"]),getMe);
-//router.get("/me",getMe);
 
 module.exports = router;
 
