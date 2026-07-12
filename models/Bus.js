@@ -1,11 +1,10 @@
-
 const mongoose = require("mongoose");
 
 // ১২ ঘণ্টার ফরম্যাট ভ্যালিডেটর (null বা ফাঁকা ভ্যালুকে স্কিপ করবে)
 const timeValidator = {
   validator: v => {
     if (v === null || v === undefined || v === "") return true;
-    // কোলন (:) দিয়ে ১২ ঘণ্টার AM/PM ফরম্যাট চেক করার জন্য স্ট্যান্ডার্ড রেজেক্স
+    // কোলন (:) দিয়ে ১২ ঘণ্টার AM/PM ফরম্যাট চেক করার জন্য স্ট্যান্ডার্ড রেজেক্স
     return /^(0?[1-9]|1[0-2]):[0-5]\d\s?(AM|PM)$/i.test(v);
   },
   message: props => `${props.value} সঠিক ১২ ঘণ্টার সময় ফরম্যাট (ex: 7:20 AM, 02:40 PM) নয়!`
@@ -78,10 +77,10 @@ TripSchema.virtual("to").get(function () {
 
 TripSchema.pre("validate", async function () {
   if (this.stops && this.stops.length > 0) {
-    // ১. ডাটাবেজে সেভ হওয়ার আগে সিকোয়েন্স অনুযায়ী স্টপগুলো সর্ট করে নেওয়া
+    // ১. ডাটাবেজে সেভ হওয়ার আগে সিকোয়েন্স অনুযায়ী স্টপগুলো সর্ট করে নেওয়া
     this.stops.sort((a, b) => a.sequence - b.sequence);
 
-    // ২. লজিক্যাল ভ্যালিডেশন: শুরুর সময় যেন গন্তব্যের সময়ের চেয়ে বেশি না হয়
+    // ২. লজিক্যাল ভ্যালিডেশন: শুরুর সময় এবং গন্তব্যের সময় যেন একদম সমান না হয়
     const timedStops = this.stops.filter(s => s.time);
     
     if (timedStops.length >= 2) {
@@ -91,19 +90,19 @@ TripSchema.pre("validate", async function () {
       const startTime24 = convertTo24Hour(firstStop.time);
       const endTime24 = convertTo24Hour(lastStop.time);
 
-      if (startTime24 >= endTime24) {
-        throw new Error(`Trip Validation Error: Trip start time (${firstStop.time}) must be before arrival time (${lastStop.time})`);
+      // 🌙 Overnight trip handling: trip মধ্যরাত পার করে পরদিন শেষ হতে পারে
+      // (যেমন শুরু 09:40 PM, শেষ 01:59 AM পরদিন) — এটা সম্পূর্ণ valid schedule।
+      // তাই startTime24 > endTime24 হলে সেটাকে overnight trip ধরে নিয়ে
+      // pass করানো হচ্ছে, error ছোঁড়া হচ্ছে না।
+      //
+      // শুধু তখনই error দেওয়া হবে যখন দুই সময় হুবহু সমান — কারণ একটা trip-এর
+      // শুরু আর শেষ সময় (duration শূন্য) কখনোই এক হতে পারে না।
+      if (startTime24 === endTime24) {
+        throw new Error(`Trip Validation Error: Trip start time (${firstStop.time}) and arrival time (${lastStop.time}) cannot be the same.`);
       }
     }
   }
 });
-
-// মেইন বাস স্কিমা
-// const BusSchema = new mongoose.Schema({
-//   busNo: { type: String, required: true, unique: true },
-//   busName: { type: String, required: true },
-//   trips: [TripSchema]
-// }, { timestamps: true });
 
 // মেইন বাস স্কিমা
 const BusSchema = new mongoose.Schema({
@@ -111,7 +110,7 @@ const BusSchema = new mongoose.Schema({
   busName: { type: String, required: true },
   trips: [TripSchema],
   
-  // 🎯 'driver' কেটে 'driverId' করে দেওয়া হলো
+  // 🎯 'driver' কেটে 'driverId' করে দেওয়া হলো
   driverId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: "Driver", 
@@ -119,7 +118,7 @@ const BusSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// বাসের সমস্ত ট্রিপগুলোকে দিনের শুরুর সময় (Chronological Order) অনুযায়ী সাজানো
+// বাসের সমস্ত ট্রিপগুলোকে দিনের শুরুর সময় (Chronological Order) অনুযায়ী সাজানো
 BusSchema.pre("save", async function () {
   if (this.trips && this.trips.length > 0) {
     this.trips.sort((a, b) => {

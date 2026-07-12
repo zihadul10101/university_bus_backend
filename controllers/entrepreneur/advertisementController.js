@@ -20,13 +20,7 @@ exports.submitAd = async (req, res) => {
       owner: req.user.id,
       status: 'approved',
     });
-    // console.log(req.user);
-    // const business = await Business.findById(businessId);
 
-    // console.log("Business:", business);
-    // console.log("Owner:", business?.owner?.toString());
-    // console.log("User:", req.user._id.toString());
-    // console.log("Status:", business?.status);
     if (!business)
       return res.status(404).json({
         success: false,

@@ -2,26 +2,6 @@ const Admin = require('../models/Admin');
 const bcrypt = require('bcrypt');
 const mongoose = require("mongoose");
 
-// Create Sub Admin
-// exports.createSubAdmin = async (req, res) => {
-//   try {
-//     const { name, email, password, permissions } = req.body;
-//     const hashedPassword = await bcrypt.hash(password, 10);
-
-//     const subAdmin = await Admin.create({
-//       name,
-//       email,
-//       password: hashedPassword,
-//       role: 'sub_admin',
-//       permissions
-//     });
-
-//     res.status(201).json({ message: 'Sub Admin created', subAdmin });
-//   } catch (err) {
-//     res.status(500).json({ message: err.message });
-//   }
-// };
-
 exports.createSubAdmin = async (req, res) => {
   try {
     const { name, email, password, permissions } = req.body;

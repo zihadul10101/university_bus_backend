@@ -18,15 +18,7 @@ const businessSchema = new mongoose.Schema(
       type: String,
       unique: true,
     },
-    // category: {
-    //   type:     String,
-    //   required: [true, 'Category is required'],
-    //   enum: [
-    //     'food', 'fashion', 'technology', 'education',
-    //     'health', 'beauty', 'sports', 'entertainment',
-    //     'services', 'other',
-    //   ],
-    // },
+
     category: {
       type: String,
       required: [true, "Category is required"],
