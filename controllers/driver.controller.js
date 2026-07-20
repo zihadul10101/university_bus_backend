@@ -12,31 +12,31 @@ exports.createDriver = async (req, res) => {
   try {
     const { name, mobile, licenseNumber, loginName, password } = req.body;
 
-    // ✅ ডুপ্লিকেট চেক (আপনার আগের লজিক ঠিক আছে)
+   
     const existingDriver = await Driver.findOne({
       $or: [{ mobile }, { licenseNumber }, { loginName }]
     });
 
     if (existingDriver) {
-      // ... আপনার এরর হ্যান্ডলিং লজিক
+     
       return res.status(400).json({ success: false, message: "Duplicate value detected" });
     }
 
-    // 🔐 পাসওয়ার্ড হ্যাশ করা
+   
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ ড্রাইভার তৈরি (রোল অটোমেটিক 'driver' হিসেবে সেট হবে)
+   
     const driver = await Driver.create({
       name,
       mobile,
       licenseNumber,
       loginName,
       password: hashedPassword,
-      role: "driver", // ম্যানুয়ালি নিশ্চিত করার জন্য দিতে পারেন
+      role: "driver",
       createdBy: req.user.id
     });
 
-    driver.password = undefined; // রেসপন্স থেকে পাসওয়ার্ড হাইড করা
+    driver.password = undefined; 
 
     return res.status(201).json({
       success: true,
@@ -45,7 +45,7 @@ exports.createDriver = async (req, res) => {
     });
 
   } catch (err) {
-    // ... আপনার এরর হ্যান্ডলিং
+
   }
 };
 
