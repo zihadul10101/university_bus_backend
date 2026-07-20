@@ -64,20 +64,18 @@ const safeDeleteFile = (filePath) => {
 };
 
 exports.createDriver = async (req, res) => {
-
   try {
     const { name, mobile, licenseNumber, loginName, password } = req.body;
-      console.log("Req Body:", req.body); // সব ফিল্ড ঠিকমতো আসছে কি না
-  console.log("Req File:", req.file); // ইমেজ ফাইল আসছে কি না দেখুন
+    console.log("Req Body:", req.body);
+    console.log("Req File:", req.file);
 
-    // ✅ req.user না থাকলে আগেই ধরা (auth middleware ঠিকমতো req.user সেট করছে কিনা)
     if (!req.user || !req.user.id) {
-      safeDeleteFile(req.file?.path);
+      await safeDeleteCloudinaryImage(req.file?.filename);
       return res.status(401).json({ success: false, message: "Unauthorized: user not found in request" });
     }
 
     if (!name || !mobile || !licenseNumber || !loginName || !password) {
-      safeDeleteFile(req.file?.path);
+      await safeDeleteCloudinaryImage(req.file?.filename);
       return res.status(400).json({ success: false, message: "সব ফিল্ড আবশ্যক" });
     }
 
@@ -86,13 +84,11 @@ exports.createDriver = async (req, res) => {
     });
 
     if (existingDriver) {
-      safeDeleteFile(req.file?.path);
+      await safeDeleteCloudinaryImage(req.file?.filename);
       return res.status(400).json({ success: false, message: "Duplicate value detected" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
-   const imagePath = req.file ? req.file.path : null;
 
     const driver = await Driver.create({
       name,
@@ -100,7 +96,8 @@ exports.createDriver = async (req, res) => {
       licenseNumber,
       loginName,
       password: hashedPassword,
-      image: imagePath,
+      image: req.file ? req.file.path : null,          // secure_url
+      imagePublicId: req.file ? req.file.filename : null, // public_id
       role: "driver",
       createdBy: req.user.id
     });
@@ -114,12 +111,8 @@ exports.createDriver = async (req, res) => {
     });
 
   } catch (err) {
-    // ✅ Render Logs-এ পুরো স্ট্যাক ট্রেস দেখার জন্য (আসল root cause ধরতে এটা জরুরি)
     console.error("Create Driver Error:", err);
-
-    // ✅ এখন safeDeleteFile ব্যবহার করছি — double unlink-এ আর crash হবে না
-    safeDeleteFile(req.file?.path);
-
+    await safeDeleteCloudinaryImage(req.file?.filename);
     return res.status(500).json({ success: false, message: err.message || "Internal Server Error" });
   }
 };

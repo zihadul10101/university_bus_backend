@@ -11,6 +11,7 @@ image: {
   type: String, 
   default: null,
 },
+imagePublicId: { type: String, default: null },
   busId: { type: mongoose.Schema.Types.ObjectId, ref: 'Bus' },
 
   location: {
