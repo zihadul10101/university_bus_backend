@@ -8,21 +8,43 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// mimetype থেকে সঠিক extension বের করা (filename-এর উপর নির্ভর না করে)
+const mimeToFormat = {
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: {
-    folder: "drivers",
-    allowed_formats: ["jpg", "jpeg", "png", "webp"],
-    transformation: [{ width: 500, height: 500, crop: "limit" }], // অপশনাল: বড় ছবি অটো রিসাইজ
+  params: async (req, file) => {
+    const format = mimeToFormat[file.mimetype] || "jpg";
+    return {
+      folder: "drivers",
+      format,
+      public_id: `driver-${Date.now()}-${Math.round(Math.random() * 1e9)}`,
+      transformation: [{ width: 500, height: 500, crop: "limit" }],
+    };
   },
 });
 
+// ✅ allowed_formats সরিয়ে এখানে mimetype দিয়ে ভ্যালিডেশন করা হচ্ছে
+const fileFilter = (req, file, cb) => {
+  const allowedMimes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("শুধু jpg, jpeg, png, webp ফরম্যাট গ্রহণযোগ্য"), false);
+  }
+};
+
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-// ✅ Multer/Cloudinary এরর JSON আকারে পাঠানোর জন্য wrapper middleware
 const uploadSingleImage = (fieldName) => (req, res, next) => {
   const middleware = upload.single(fieldName);
   middleware(req, res, (err) => {
@@ -33,7 +55,6 @@ const uploadSingleImage = (fieldName) => (req, res, next) => {
         }
         return res.status(400).json({ success: false, message: `Upload error: ${err.message}` });
       }
-      // allowed_formats ভায়োলেশন বা অন্য Cloudinary এরর
       return res.status(400).json({ success: false, message: err.message || "শুধু jpg, jpeg, png, webp ফরম্যাট গ্রহণযোগ্য" });
     }
     next();
