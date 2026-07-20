@@ -2,107 +2,41 @@ const Driver = require('../models/Driver');
 const Bus = require('../models/Bus');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const fs = require("fs");
+
 const mongoose = require("mongoose");
 
 
 
 
-// exports.createDriver = async (req, res) => {
-//   try {
-//     const { name, mobile, licenseNumber, loginName, password } = req.body;
-
-//     // ✅ ডুপ্লিকেট চেক (আপনার আগের লজিক ঠিক আছে)
-//     const existingDriver = await Driver.findOne({
-//       $or: [{ mobile }, { licenseNumber }, { loginName }]
-//     });
-
-//     if (existingDriver) {
-//       // ... আপনার এরর হ্যান্ডলিং লজিক
-//       return res.status(400).json({ success: false, message: "Duplicate value detected" });
-//     }
-
-//     // 🔐 পাসওয়ার্ড হ্যাশ করা
-//     const hashedPassword = await bcrypt.hash(password, 10);
-
-//     // ✅ ড্রাইভার তৈরি (রোল অটোমেটিক 'driver' হিসেবে সেট হবে)
-//     const driver = await Driver.create({
-//       name,
-//       mobile,
-//       licenseNumber,
-//       loginName,
-//       password: hashedPassword,
-//       role: "driver", // ম্যানুয়ালি নিশ্চিত করার জন্য দিতে পারেন
-//       createdBy: req.user.id
-//     });
-
-//     driver.password = undefined; // রেসপন্স থেকে পাসওয়ার্ড হাইড করা
-
-//     return res.status(201).json({
-//       success: true,
-//       message: "Driver created successfully",
-//       data: driver
-//     });
-
-//   } catch (err) {
-//     // ... আপনার এরর হ্যান্ডলিং
-//   }
-// };
-
-
-
-
-// ✅ সেফ ডিলিট হেল্পার — ফাইল না থাকলে বা delete fail করলেও crash করবে না
-const safeDeleteFile = (filePath) => {
-  try {
-    if (filePath && fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-  } catch (e) {
-    console.error("File delete failed:", e.message);
-  }
-};
-
 exports.createDriver = async (req, res) => {
   try {
     const { name, mobile, licenseNumber, loginName, password } = req.body;
-    console.log("Req Body:", req.body);
-    console.log("Req File:", req.file);
 
-    if (!req.user || !req.user.id) {
-      await safeDeleteCloudinaryImage(req.file?.filename);
-      return res.status(401).json({ success: false, message: "Unauthorized: user not found in request" });
-    }
-
-    if (!name || !mobile || !licenseNumber || !loginName || !password) {
-      await safeDeleteCloudinaryImage(req.file?.filename);
-      return res.status(400).json({ success: false, message: "সব ফিল্ড আবশ্যক" });
-    }
-
+    // ✅ ডুপ্লিকেট চেক (আপনার আগের লজিক ঠিক আছে)
     const existingDriver = await Driver.findOne({
       $or: [{ mobile }, { licenseNumber }, { loginName }]
     });
 
     if (existingDriver) {
-      await safeDeleteCloudinaryImage(req.file?.filename);
+      // ... আপনার এরর হ্যান্ডলিং লজিক
       return res.status(400).json({ success: false, message: "Duplicate value detected" });
     }
 
+    // 🔐 পাসওয়ার্ড হ্যাশ করা
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // ✅ ড্রাইভার তৈরি (রোল অটোমেটিক 'driver' হিসেবে সেট হবে)
     const driver = await Driver.create({
       name,
       mobile,
       licenseNumber,
       loginName,
       password: hashedPassword,
-      image: req.file ? req.file.path : null,          // secure_url
-      imagePublicId: req.file ? req.file.filename : null, // public_id
-      role: "driver",
+      role: "driver", // ম্যানুয়ালি নিশ্চিত করার জন্য দিতে পারেন
       createdBy: req.user.id
     });
 
-    driver.password = undefined;
+    driver.password = undefined; // রেসপন্স থেকে পাসওয়ার্ড হাইড করা
 
     return res.status(201).json({
       success: true,
@@ -111,11 +45,11 @@ exports.createDriver = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Create Driver Error:", err);
-    await safeDeleteCloudinaryImage(req.file?.filename);
-    return res.status(500).json({ success: false, message: err.message || "Internal Server Error" });
+    // ... আপনার এরর হ্যান্ডলিং
   }
 };
+
+
 
 exports.updateDriver = async (req, res) => {
   try {
