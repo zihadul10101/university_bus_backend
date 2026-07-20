@@ -64,8 +64,11 @@ const safeDeleteFile = (filePath) => {
 };
 
 exports.createDriver = async (req, res) => {
+
   try {
     const { name, mobile, licenseNumber, loginName, password } = req.body;
+      console.log("Req Body:", req.body); // সব ফিল্ড ঠিকমতো আসছে কি না
+  console.log("Req File:", req.file); // ইমেজ ফাইল আসছে কি না দেখুন
 
     // ✅ req.user না থাকলে আগেই ধরা (auth middleware ঠিকমতো req.user সেট করছে কিনা)
     if (!req.user || !req.user.id) {
@@ -89,7 +92,7 @@ exports.createDriver = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const imagePath = req.file ? `/uploads/drivers/${req.file.filename}` : null;
+   const imagePath = req.file ? req.file.path : null;
 
     const driver = await Driver.create({
       name,
