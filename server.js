@@ -4,6 +4,7 @@ const http = require("http");
 const { Server } = require("socket.io");
 const rateLimit = require("express-rate-limit");
 const cors = require("cors");
+const path = require("path");
 
 const connectDB = require("./config/db");
 const createDefaultAdmin = require("./utils/createDefaultAdmin");
@@ -35,7 +36,7 @@ const limiter = rateLimit({
 });
 
 app.use(limiter);
-
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use('/api/v1/auth', require('./routes/v1/auth.routes'));
 
 
@@ -47,8 +48,7 @@ app.use('/api/v1/buses', require('./routes/v1/bus.routes'));
 app.use('/api/v1/students', require('./routes/v1/student.routes'));
 app.use('/api/v1/notices', require('./routes/v1/notice.routes'));
 
-app.use("/api/v1/research", require('./routes/v1/researchRoutes'));
-app.use("/api/v1/entrepreneur", require('./routes/v1/studentBusiness.routes'));
+
 
 
 

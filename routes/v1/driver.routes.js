@@ -12,9 +12,10 @@ const {
   updateStatus
 } = require('../../controllers/driver.controller');
 const authMiddleware = require('../../middleware/auth.middleware');
+const upload = require('../../utils/upload');
 
 // Sub-admin driver management
-router.post('/create-driver',  authMiddleware(['super_admin', 'sub_admin']), createDriver);
+router.post('/create-driver', authMiddleware(['super_admin', 'sub_admin']),upload.single("image"),  createDriver);
 router.put('/update-driver/:id',authMiddleware(['super_admin', 'sub_admin']), updateDriver);
 router.delete('/delete-driver/:id', authMiddleware(['super_admin', 'sub_admin']), deleteDriver);
 router.get('/all-driver',  authMiddleware(['super_admin', 'sub_admin']), getDrivers);

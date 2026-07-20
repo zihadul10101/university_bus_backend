@@ -7,7 +7,10 @@ const DriverSchema = new mongoose.Schema({
   licenseNumber: { type: String, required: true, unique: true },
   loginName: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-
+image: {
+  type: String, 
+  default: null,
+},
   busId: { type: mongoose.Schema.Types.ObjectId, ref: 'Bus' },
 
   location: {

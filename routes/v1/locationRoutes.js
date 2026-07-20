@@ -15,17 +15,24 @@
 
 const router = require('express').Router();
 
+// Adjust this import to match your existing auth middleware
+// (the one already used to protect driver routes elsewhere, e.g. in
+// routes/v1/driver.routes.js). Named here as `protect` + `requireRole`
+// following a common pattern - rename to match what you already have.
+
+
 const {
   getRoomStatus,
   getAllLiveRooms,
-  updateLocationRest,
+  submitLocationBatch,
 } = require('../../controllers/locationController');
 
 router.get('/active-trips', getAllLiveRooms);
 router.get('/status/:roomId', getRoomStatus);
 
-// ✅ NEW: driver app এর background/headless task যখন socket এ পৌঁছাতে
-// পারে না, তখনকার fallback। ফ্রন্টএন্ডের locationService.ts এই রুটই কল করে।
-router.post('/update', updateLocationRest);
+// Offline-queue flush: driver app POSTs a batch of queued GPS points once
+// connectivity returns, in case the socket reconnection hasn't caught up
+// yet or dropped points during the gap.
+router.post('/batch',  submitLocationBatch);
 
 module.exports = router;

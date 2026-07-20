@@ -20,7 +20,7 @@ const createDefaultAdmin = async () => {
           canManageDrivers: true,
           canManageBuses: true,
           canPostNotices: true,
-          canManageSchedules: true
+          canManageSubadmin: true
         }
       });
 

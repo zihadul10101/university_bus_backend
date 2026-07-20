@@ -76,14 +76,10 @@
 //   }
 // };
 
-const {
-  activeTrips,
-  toSafeTrip,
-  applyLocationUpdate,
-  verifyTripOwnership,
-} = require("../sockets/socketHandler"); // adjust path if needed
+const { activeTrips, toSafeTrip } = require("../sockets/socketHandler"); // adjust path if needed
 
 const Bus = require("../models/Bus");
+
 
 // ১. বর্তমানে যতগুলো বাস লাইভ আছে সবার লিস্ট (বাসের নামসহ)
 exports.getAllLiveRooms = async (req, res) => {
@@ -105,7 +101,7 @@ exports.getAllLiveRooms = async (req, res) => {
 
     // ২. ডাটাবেস থেকে ওই বাসগুলোর নাম এবং ডিটেইলস নিয়ে আসা
     const busDetails = await Bus.find({ _id: { $in: liveBusIds } }).select(
-      "busName busNo"
+      "busName busNo capacity"
     );
 
     // ৩. মেমোরির ডাটার সাথে ডাটাবেসের নাম মার্জ (Merge) করা
@@ -115,6 +111,7 @@ exports.getAllLiveRooms = async (req, res) => {
         busId: roomId,
         busName: dbBus?.busName || trip.busInfo?.busName || "Unknown Bus",
         busNo: dbBus?.busNo || trip.busInfo?.busNo || "N/A",
+        capacity: dbBus?.capacity ?? null,
         ...toSafeTrip(trip),
       };
     });
@@ -143,13 +140,15 @@ exports.getRoomStatus = async (req, res) => {
     }
 
     // ডাটাবেস থেকে বাসের নাম নেওয়া (fallback: trip.busInfo)
-    const busInfo = await Bus.findById(roomId).select("busName busNo");
+    const busInfo = await Bus.findById(roomId).select("busName busNo capacity route");
 
     res.status(200).json({
       success: true,
       data: {
         busName: busInfo?.busName || trip.busInfo?.busName || "Unknown",
         busNo: busInfo?.busNo || trip.busInfo?.busNo || "N/A",
+        capacity: busInfo?.capacity ?? null,
+        route: busInfo?.route ?? null,
         ...toSafeTrip(trip),
       },
     });
@@ -158,45 +157,72 @@ exports.getRoomStatus = async (req, res) => {
   }
 };
 
-// ৩. ✅ NEW — REST fallback location update।
-// ড্রাইভার অ্যাপের background task যখন headless JS context এ চলে এবং
-// socket তখনো handshake সম্পন্ন করেনি, তখন এই রুট দিয়ে লোকেশন পাঠানো হয়,
-// যাতে GPS ping কখনো silently miss না হয়ে যায়।
-//
-// ⚠️ প্রোডাকশন হার্ডেনিং প্রয়োজন: এই মুহূর্তে ownership check শুধু
-// `trip.driverId === driverId` মিলিয়ে করা হচ্ছে — অর্থাৎ কেউ যদি একজন
-// active ড্রাইভারের driverId + roomId অনুমান করে ফেলে, সে ভুয়া লোকেশন
-// পুশ করতে পারবে। এই রুটকে driver login এর JWT/Bearer টোকেন দিয়ে protect
-// করে req.user.id === driverId চেক করাটা পরবর্তী ধাপে অবশ্যই করুন।
-exports.updateLocationRest = async (req, res) => {
+// ৩. Offline-queue flush endpoint: driver app POSTs a batch of GPS points
+//    collected while the socket was disconnected. Only the latest point
+//    updates "live" state; the full batch is optionally persisted for
+//    trip-history / route-replay purposes.
+exports.submitLocationBatch = async (req, res) => {
   try {
-    const { roomId, driverId, latitude, longitude, speed } = req.body;
+    const { roomId, points } = req.body;
 
-    if (!roomId || !driverId || latitude == null || longitude == null) {
+    if (!roomId || !Array.isArray(points) || points.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "roomId, driverId, latitude and longitude are required",
+        message: "roomId and a non-empty points[] array are required",
       });
     }
 
-    if (!verifyTripOwnership(roomId, driverId)) {
-      return res.status(403).json({
+    const latest = points[points.length - 1];
+    if (latest.latitude == null || latest.longitude == null) {
+      return res.status(400).json({
         success: false,
-        message: "Not authorized to update location for this trip",
+        message: "Each point requires latitude and longitude",
       });
     }
 
-    const result = applyLocationUpdate(roomId, {
-      latitude: Number(latitude),
-      longitude: Number(longitude),
-      speed: Number(speed) || 0,
-    });
+    const trip = activeTrips.get(roomId);
 
-    if (!result.ok) {
-      return res.status(409).json({ success: false, message: result.error });
+    if (trip) {
+      trip.lastLocation = { latitude: latest.latitude, longitude: latest.longitude };
+      trip.speed = latest.speed || 0;
+      trip.lastUpdated = latest.timestamp ? new Date(latest.timestamp) : new Date();
+      trip.isLive = true;
+      trip.tripStatus = "active";
     }
 
-    res.status(200).json({ success: true });
+    // Broadcast so any students currently connected see the catch-up point
+    // immediately, without waiting for the driver's socket to reconnect.
+    const io = req.app.get("io");
+    if (io) {
+      io.to(roomId).emit("location-broadcast", {
+        roomId,
+        latitude: latest.latitude,
+        longitude: latest.longitude,
+        speed: latest.speed || 0,
+        lastUpdated: trip?.lastUpdated,
+        viewerCount: trip ? trip.viewers.size : 0,
+        isHeartbeat: false,
+        recovered: true, // flag: this point came from an offline-queue flush, not a live tick
+      });
+    }
+
+    // Best-effort persistence of the trip's latest known state. Not writing
+    // every individual queued point to avoid unnecessary write load; if you
+    // want full route replay, batch-insert `points` into a separate
+    // LocationLog collection here instead.
+    if (trip?.driverId) {
+      await Trip.findOneAndUpdate(
+        { busId: roomId, status: { $in: ["active", "paused"] } },
+        {
+          lastLocation: { latitude: latest.latitude, longitude: latest.longitude },
+          lastSpeed: latest.speed || 0,
+          lastUpdated: trip.lastUpdated,
+        },
+        { sort: { createdAt: -1 } }
+      ).catch((err) => console.error("[submitLocationBatch] Trip update failed:", err.message));
+    }
+
+    res.status(200).json({ success: true, accepted: points.length });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

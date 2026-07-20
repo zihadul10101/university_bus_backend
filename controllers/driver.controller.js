@@ -2,40 +2,86 @@ const Driver = require('../models/Driver');
 const Bus = require('../models/Bus');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const fs = require("fs");
 const mongoose = require("mongoose");
 
 
+
+
+// exports.createDriver = async (req, res) => {
+//   try {
+//     const { name, mobile, licenseNumber, loginName, password } = req.body;
+
+//     // ✅ ডুপ্লিকেট চেক (আপনার আগের লজিক ঠিক আছে)
+//     const existingDriver = await Driver.findOne({
+//       $or: [{ mobile }, { licenseNumber }, { loginName }]
+//     });
+
+//     if (existingDriver) {
+//       // ... আপনার এরর হ্যান্ডলিং লজিক
+//       return res.status(400).json({ success: false, message: "Duplicate value detected" });
+//     }
+
+//     // 🔐 পাসওয়ার্ড হ্যাশ করা
+//     const hashedPassword = await bcrypt.hash(password, 10);
+
+//     // ✅ ড্রাইভার তৈরি (রোল অটোমেটিক 'driver' হিসেবে সেট হবে)
+//     const driver = await Driver.create({
+//       name,
+//       mobile,
+//       licenseNumber,
+//       loginName,
+//       password: hashedPassword,
+//       role: "driver", // ম্যানুয়ালি নিশ্চিত করার জন্য দিতে পারেন
+//       createdBy: req.user.id
+//     });
+
+//     driver.password = undefined; // রেসপন্স থেকে পাসওয়ার্ড হাইড করা
+
+//     return res.status(201).json({
+//       success: true,
+//       message: "Driver created successfully",
+//       data: driver
+//     });
+
+//   } catch (err) {
+//     // ... আপনার এরর হ্যান্ডলিং
+//   }
+// };
 
 
 exports.createDriver = async (req, res) => {
   try {
     const { name, mobile, licenseNumber, loginName, password } = req.body;
 
-    // ✅ ডুপ্লিকেট চেক (আপনার আগের লজিক ঠিক আছে)
     const existingDriver = await Driver.findOne({
       $or: [{ mobile }, { licenseNumber }, { loginName }]
     });
 
     if (existingDriver) {
-      // ... আপনার এরর হ্যান্ডলিং লজিক
+      
+      if (req.file) {
+        fs.unlinkSync(req.file.path);
+      }
       return res.status(400).json({ success: false, message: "Duplicate value detected" });
     }
 
-    // 🔐 পাসওয়ার্ড হ্যাশ করা
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ ড্রাইভার তৈরি (রোল অটোমেটিক 'driver' হিসেবে সেট হবে)
+    const imagePath = req.file ? `/uploads/drivers/${req.file.filename}` : null;
+
     const driver = await Driver.create({
       name,
       mobile,
       licenseNumber,
       loginName,
       password: hashedPassword,
-      role: "driver", // ম্যানুয়ালি নিশ্চিত করার জন্য দিতে পারেন
+      image: imagePath,
+      role: "driver",
       createdBy: req.user.id
     });
 
-    driver.password = undefined; // রেসপন্স থেকে পাসওয়ার্ড হাইড করা
+    driver.password = undefined;
 
     return res.status(201).json({
       success: true,
@@ -44,10 +90,12 @@ exports.createDriver = async (req, res) => {
     });
 
   } catch (err) {
-    // ... আপনার এরর হ্যান্ডলিং
+    if (req.file) {
+      fs.unlinkSync(req.file.path); // এরর হলে আপলোড করা ফাইল ক্লিন-আপ
+    }
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
-
 
 exports.updateDriver = async (req, res) => {
   try {
