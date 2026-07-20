@@ -18,7 +18,7 @@ const upload = require('../../utils/upload');
 router.post(
   '/create-driver',
   authMiddleware(['super_admin', 'sub_admin']),
-  upload.uploadSingleImage("image"),
+upload.uploadSingleImage("image"),
   createDriver
 );
 router.put('/update-driver/:id',authMiddleware(['super_admin', 'sub_admin']), updateDriver);
