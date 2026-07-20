@@ -50,19 +50,40 @@ const mongoose = require("mongoose");
 // };
 
 
+
+
+// ✅ সেফ ডিলিট হেল্পার — ফাইল না থাকলে বা delete fail করলেও crash করবে না
+const safeDeleteFile = (filePath) => {
+  try {
+    if (filePath && fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  } catch (e) {
+    console.error("File delete failed:", e.message);
+  }
+};
+
 exports.createDriver = async (req, res) => {
   try {
     const { name, mobile, licenseNumber, loginName, password } = req.body;
+
+    // ✅ req.user না থাকলে আগেই ধরা (auth middleware ঠিকমতো req.user সেট করছে কিনা)
+    if (!req.user || !req.user.id) {
+      safeDeleteFile(req.file?.path);
+      return res.status(401).json({ success: false, message: "Unauthorized: user not found in request" });
+    }
+
+    if (!name || !mobile || !licenseNumber || !loginName || !password) {
+      safeDeleteFile(req.file?.path);
+      return res.status(400).json({ success: false, message: "সব ফিল্ড আবশ্যক" });
+    }
 
     const existingDriver = await Driver.findOne({
       $or: [{ mobile }, { licenseNumber }, { loginName }]
     });
 
     if (existingDriver) {
-      
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
+      safeDeleteFile(req.file?.path);
       return res.status(400).json({ success: false, message: "Duplicate value detected" });
     }
 
@@ -90,10 +111,13 @@ exports.createDriver = async (req, res) => {
     });
 
   } catch (err) {
-    if (req.file) {
-      fs.unlinkSync(req.file.path); // এরর হলে আপলোড করা ফাইল ক্লিন-আপ
-    }
-    return res.status(500).json({ success: false, message: err.message });
+    // ✅ Render Logs-এ পুরো স্ট্যাক ট্রেস দেখার জন্য (আসল root cause ধরতে এটা জরুরি)
+    console.error("Create Driver Error:", err);
+
+    // ✅ এখন safeDeleteFile ব্যবহার করছি — double unlink-এ আর crash হবে না
+    safeDeleteFile(req.file?.path);
+
+    return res.status(500).json({ success: false, message: err.message || "Internal Server Error" });
   }
 };
 
