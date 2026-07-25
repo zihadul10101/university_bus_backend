@@ -233,28 +233,28 @@ exports.registerStudent = async (req, res) => {
       otpExpire,
     });
 
-    // 🔹 Send OTP email — আলাদা try/catch, যাতে email fail করলেও registration response ঠিকভাবে যায়
-    try {
-      await sendEmail(student.email, "UniBus Email Verification", buildOtpEmail(otp));
-      console.log("✅ OTP email sent to:", student.email);
-    } catch (emailError) {
-      console.error("❌ Email send failed:", emailError.message);
-    }
-
-    // student তৈরি হয়ে গেছে, তাই email fail করলেও success response পাঠানো হচ্ছে
+    // 🔹 আগে response পাঠান — client কে email পাঠানোর জন্য অপেক্ষা করাবেন না
     res.status(201).json({
       success: true,
-      message: "রেজিস্ট্রেশন সফল হয়েছে। আপনার ইমেইলে OTP পাঠানো হয়েছে।",
+      message: "রেজিস্ট্রেশন সফল হয়েছে। আপনার ইমেইলে OTP পাঠানো হচ্ছে।",
       userId: student._id,
       email: student.email,
     });
 
+    // 🔹 Email background এ পাঠান (fire-and-forget) — response আটকাবে না
+    sendEmail(student.email, "UniBus Email Verification", buildOtpEmail(otp))
+      .then(() => console.log("✅ OTP email sent to:", student.email))
+      .catch((emailError) => console.error("❌ Email send failed:", emailError.message));
+
   } catch (error) {
     console.error("❌ Register error:", error.message);
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    // headers আগে থেকে পাঠানো না থাকলেই শুধু error response পাঠানো নিরাপদ
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
   }
 };
 
@@ -320,21 +320,18 @@ exports.resendOtp = async (req, res) => {
     student.otpExpire = Date.now() + 5 * 60 * 1000;
     await student.save();
 
-    try {
-      await sendEmail(student.email, "UniBus New Verification OTP", buildOtpEmail(newOtp));
-      console.log("✅ Resend OTP email sent to:", student.email);
-    } catch (emailError) {
-      console.error("❌ Resend email failed:", emailError.message);
-      return res.status(500).json({
-        success: false,
-        message: "OTP জেনারেট হয়েছে কিন্তু ইমেইল পাঠানো যায়নি, আবার চেষ্টা করুন"
-      });
-    }
+    // 🔹 আগে response পাঠান
+    res.json({ success: true, message: "নতুন OTP আপনার ইমেইলে পাঠানো হচ্ছে" });
 
-    res.json({ success: true, message: "নতুন OTP আপনার ইমেইলে পাঠানো হয়েছে" });
+    // 🔹 Email background এ পাঠান
+    sendEmail(student.email, "UniBus New Verification OTP", buildOtpEmail(newOtp))
+      .then(() => console.log("✅ Resend OTP email sent to:", student.email))
+      .catch((emailError) => console.error("❌ Resend email failed:", emailError.message));
 
   } catch (error) {
     console.error("❌ Resend OTP error:", error.message);
-    res.status(500).json({ success: false, message: error.message });
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: error.message });
+    }
   }
 };
