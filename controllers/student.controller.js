@@ -183,13 +183,13 @@ exports.registerStudent = async (req, res) => {
     }
 
     // 🔹 Student ID format validation: XXX-XXX-XXX
-    const studentIdRegex = /^\d{3}-\d{3}-\d{3}$/;
-    if (!studentIdRegex.test(studentId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Student ID অবশ্যই XXX-XXX-XXX ফরম্যাটে হতে হবে (যেমন: 666-609-091)"
-      });
-    }
+const studentIdRegex = /^\d{1,3}-\d{1,3}-\d{1,3}$/;
+if (!studentIdRegex.test(studentId)) {
+  return res.status(400).json({
+    success: false,
+    message: "Student ID ফরম্যাট ভুল — প্রতিটা অংশে সর্বোচ্চ ৩ ডিজিট হতে পারে (যেমন: 666-60-09 অথবা 666-112-245)"
+  });
+}
 
     // 🔹 Duplicate check (email + studentId)
     const existingStudent = await Student.findOne({
