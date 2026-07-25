@@ -128,7 +128,7 @@
 //   }
 // };
 
- 
+
 
 const bcrypt = require('bcrypt');
 const Student = require('../models/Student'); // path আপনার প্রজেক্ট অনুযায়ী ঠিক করে নিন
@@ -182,14 +182,23 @@ exports.registerStudent = async (req, res) => {
       });
     }
 
-    // 🔹 Student ID format validation: XXX-XXX-XXX
-const studentIdRegex = /^\d{1,3}-\d{1,3}-\d{1,3}$/;
-if (!studentIdRegex.test(studentId)) {
-  return res.status(400).json({
-    success: false,
-    message: "Student ID ফরম্যাট ভুল — প্রতিটা অংশে সর্বোচ্চ ৩ ডিজিট হতে পারে (যেমন: 666-60-09 অথবা 666-112-245)"
-  });
-}
+    // 🔹 Student ID format validation: প্রতিটা group max 3 digit (e.g. 666-60-09, 666-112-245)
+    const studentIdRegex = /^\d{1,3}-\d{1,3}-\d{1,3}$/;
+    if (!studentIdRegex.test(studentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Student ID ফরম্যাট ভুল — প্রতিটা অংশে সর্বোচ্চ ৩ ডিজিট হতে পারে (যেমন: 666-60-09 অথবা 666-112-245)"
+      });
+    }
+
+    // 🔹 Password strength validation
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{6,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message: "পাসওয়ার্ড অবশ্যই ৬ ক্যারেক্টারের বেশি হতে হবে, ১টি বড় হাতের, ১টি ছোট হাতের ও ১টি স্পেশাল ক্যারেক্টার থাকতে হবে"
+      });
+    }
 
     // 🔹 Duplicate check (email + studentId)
     const existingStudent = await Student.findOne({
@@ -224,9 +233,15 @@ if (!studentIdRegex.test(studentId)) {
       otpExpire,
     });
 
-    // 🔹 Send OTP email
-    await sendEmail(student.email, "UniBus Email Verification", buildOtpEmail(otp));
+    // 🔹 Send OTP email — আলাদা try/catch, যাতে email fail করলেও registration response ঠিকভাবে যায়
+    try {
+      await sendEmail(student.email, "UniBus Email Verification", buildOtpEmail(otp));
+      console.log("✅ OTP email sent to:", student.email);
+    } catch (emailError) {
+      console.error("❌ Email send failed:", emailError.message);
+    }
 
+    // student তৈরি হয়ে গেছে, তাই email fail করলেও success response পাঠানো হচ্ছে
     res.status(201).json({
       success: true,
       message: "রেজিস্ট্রেশন সফল হয়েছে। আপনার ইমেইলে OTP পাঠানো হয়েছে।",
@@ -235,6 +250,7 @@ if (!studentIdRegex.test(studentId)) {
     });
 
   } catch (error) {
+    console.error("❌ Register error:", error.message);
     res.status(500).json({
       success: false,
       message: error.message
@@ -276,6 +292,7 @@ exports.verifyOtp = async (req, res) => {
     res.json({ success: true, message: "ইমেইল সফলভাবে ভেরিফাই হয়েছে" });
 
   } catch (error) {
+    console.error("❌ Verify OTP error:", error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -284,6 +301,10 @@ exports.verifyOtp = async (req, res) => {
 exports.resendOtp = async (req, res) => {
   try {
     const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "userId দিন" });
+    }
 
     const student = await Student.findById(userId);
     if (!student) {
@@ -299,11 +320,21 @@ exports.resendOtp = async (req, res) => {
     student.otpExpire = Date.now() + 5 * 60 * 1000;
     await student.save();
 
-    await sendEmail(student.email, "UniBus New Verification OTP", buildOtpEmail(newOtp));
+    try {
+      await sendEmail(student.email, "UniBus New Verification OTP", buildOtpEmail(newOtp));
+      console.log("✅ Resend OTP email sent to:", student.email);
+    } catch (emailError) {
+      console.error("❌ Resend email failed:", emailError.message);
+      return res.status(500).json({
+        success: false,
+        message: "OTP জেনারেট হয়েছে কিন্তু ইমেইল পাঠানো যায়নি, আবার চেষ্টা করুন"
+      });
+    }
 
     res.json({ success: true, message: "নতুন OTP আপনার ইমেইলে পাঠানো হয়েছে" });
 
   } catch (error) {
+    console.error("❌ Resend OTP error:", error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
