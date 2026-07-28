@@ -7,6 +7,88 @@ const moment = require('moment');
 
 
 
+exports.registerStudent = async (req, res) => {
+  try {
+    const { name, studentId, email, password, departmentName } = req.body;
+
+    // 🔹 Required field check
+    if (!name || !studentId || !email || !password || !departmentName) {
+      return res.status(400).json({
+        success: false,
+        message: "সব ফিল্ড পূরণ করুন"
+      });
+    }
+
+    // 🔹 Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "সঠিক ইমেইল ফরম্যাট দিন"
+      });
+    }
+
+    // 🔹 Student ID format validation
+    const studentIdRegex = /^\d{1,3}-\d{1,3}-\d{1,3}$/;
+    if (!studentIdRegex.test(studentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Student ID ফরম্যাট ভুল — প্রতিটা অংশে সর্বোচ্চ ৩ ডিজিট হতে পারে (যেমন: 666-60-09)"
+      });
+    }
+
+    // 🔹 Password strength validation
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{6,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message: "পাসওয়ার্ড অবশ্যই ৬ ক্যারেক্টারের বেশি, ১টি বড় হাতের, ১টি ছোট হাতের ও ১টি স্পেশাল ক্যারেক্টার থাকতে হবে"
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase();
+
+    // 🔹 Duplicate check (email + studentId)
+    const existingStudent = await Student.findOne({
+      $or: [{ email: normalizedEmail }, { studentId }]
+    });
+
+    if (existingStudent) {
+      return res.status(400).json({
+        success: false,
+        message: existingStudent.email === normalizedEmail
+          ? "এই ইমেইল দিয়ে আগে থেকেই একাউন্ট আছে"
+          : "এই Student ID দিয়ে আগে থেকেই একাউন্ট আছে"
+      });
+    }
+
+    // 🔹 Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 🔹 Create student (OTP/verification ছাড়াই সরাসরি একাউন্ট তৈরি)
+    const student = await Student.create({
+      name,
+      studentId,
+      email: normalizedEmail,
+      password: hashedPassword,
+      departmentName,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "রেজিস্ট্রেশন সফল হয়েছে",
+      userId: student._id,
+    });
+
+  } catch (error) {
+    console.error("❌ Register error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 // exports.registerStudent = async (req, res) => {
 //   try {
 //     const { name, email, password, departmentName, mobileNumber } = req.body;
@@ -77,56 +159,56 @@ const moment = require('moment');
 
 
 
-exports.registerStudent = async (req, res) => {
-  try {
-    const { name, email, password, departmentName, mobileNumber } = req.body;
+// exports.registerStudent = async (req, res) => {
+//   try {
+//     const { name, email, password, departmentName, mobileNumber } = req.body;
 
-    // 🔹 Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+//     // 🔹 Email validation
+//     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid email format"
-      });
-    }
+//     if (!emailRegex.test(email)) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid email format"
+//       });
+//     }
 
-    // 🔹 Check existing student
-    const existingStudent = await Student.findOne({ email });
+//     // 🔹 Check existing student
+//     const existingStudent = await Student.findOne({ email });
 
-    if (existingStudent) {
-      return res.status(400).json({
-        success: false,
-        message: "Email already registered"
-      });
-    }
+//     if (existingStudent) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Email already registered"
+//       });
+//     }
 
-    // 🔹 Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+//     // 🔹 Hash password
+//     const hashedPassword = await bcrypt.hash(password, 10);
 
-    console.log(hashedPassword);
+//     console.log(hashedPassword);
 
-    // 🔹 Create student
-    const student = await Student.create({
-      name,
-      email,
-      password: hashedPassword,
-      departmentName,
-      mobileNumber
-    });
+//     // 🔹 Create student
+//     const student = await Student.create({
+//       name,
+//       email,
+//       password: hashedPassword,
+//       departmentName,
+//       mobileNumber
+//     });
 
-    res.status(201).json({
-      success: true,
-      message: "Registration successfully"
-    });
+//     res.status(201).json({
+//       success: true,
+//       message: "Registration successfully"
+//     });
 
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };
 
 
 
