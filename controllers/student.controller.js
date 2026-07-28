@@ -217,30 +217,30 @@ const moment = require('moment');
 // const sendEmail = require('../utils/sendEmail');
 
 // // ---------- OTP Email Template ----------
-// const buildOtpEmail = (otp, title = "UniBus Verification") => `
-// <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
-//     <div style="background-color: #007AFF; padding: 20px; text-align: center;">
-//         <h1 style="color: white; margin: 0; font-size: 24px;">${title}</h1>
-//     </div>
-//     <div style="padding: 30px; background-color: #ffffff;">
-//         <p style="font-size: 16px; color: #333;">Hello,</p>
-//         <p style="font-size: 16px; color: #555;">আপনার UniBus account ভেরিফাই করার জন্য One-Time Password (OTP):</p>
-//         <div style="text-align: center; margin: 30px 0;">
-//             <span style="font-size: 32px; font-weight: bold; color: #007AFF; letter-spacing: 8px; border: 2px dashed #007AFF; padding: 10px 20px; border-radius: 8px; background-color: #f0f7ff;">
-//                 ${otp}
-//             </span>
-//         </div>
-//         <p style="font-size: 14px; color: #888; text-align: center;">
-//             এই OTP <strong>৫ মিনিট</strong> পর্যন্ত বৈধ থাকবে। কারো সাথে শেয়ার করবেন না।
-//         </p>
-//     </div>
-//     <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-top: 1px solid #eeeeee;">
-//         <p style="font-size: 12px; color: #aaa; margin: 0;">
-//             &copy; 2026 UniBus System | Southern University Bangladesh
-//         </p>
-//     </div>
-// </div>
-// `;
+const buildOtpEmail = (otp, title = "UniBus Verification") => `
+<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+    <div style="background-color: #007AFF; padding: 20px; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">${title}</h1>
+    </div>
+    <div style="padding: 30px; background-color: #ffffff;">
+        <p style="font-size: 16px; color: #333;">Hello,</p>
+        <p style="font-size: 16px; color: #555;">আপনার UniBus account ভেরিফাই করার জন্য One-Time Password (OTP):</p>
+        <div style="text-align: center; margin: 30px 0;">
+            <span style="font-size: 32px; font-weight: bold; color: #007AFF; letter-spacing: 8px; border: 2px dashed #007AFF; padding: 10px 20px; border-radius: 8px; background-color: #f0f7ff;">
+                ${otp}
+            </span>
+        </div>
+        <p style="font-size: 14px; color: #888; text-align: center;">
+            এই OTP <strong>৫ মিনিট</strong> পর্যন্ত বৈধ থাকবে। কারো সাথে শেয়ার করবেন না।
+        </p>
+    </div>
+    <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-top: 1px solid #eeeeee;">
+        <p style="font-size: 12px; color: #aaa; margin: 0;">
+            &copy; 2026 UniBus System | Southern University Bangladesh
+        </p>
+    </div>
+</div>
+`;
 
 // // ---------- Register ----------
 exports.registerStudent = async (req, res) => {
